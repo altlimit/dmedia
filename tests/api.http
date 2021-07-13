@@ -1,0 +1,41 @@
+@baseUrl = http://localhost:5454
+
+###
+
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+    "username": "test12",
+    "password": "123"
+}
+
+###
+
+GET {{baseUrl}}/api/users
+Content-Type: application/json
+
+###
+
+POST {{baseUrl}}/api/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
+
+
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ
+Content-Disposition: form-data; name="url"
+
+https://i.pinimg.com/236x/b0/1e/8d/b01e8d3165fe28957895ab08e2e10bd6--tasters-choice-nescafe.jpg
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
+
+###
+
+POST {{baseUrl}}/api/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
+
+
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ
+Content-Disposition: form-data; name="file"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< ./test.jpg
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
