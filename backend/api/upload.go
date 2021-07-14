@@ -4,6 +4,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path"
+
+	"github.com/altlimit/dmedia/model"
 )
 
 func (s *Server) handleUpload() http.HandlerFunc {
@@ -17,6 +20,12 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		// fetch from URL
 		blobURL := r.FormValue("url")
 		if blobURL != "" {
+			if fName == "" {
+				fName = path.Base(blobURL)
+				if fName == "." || fName == "/" {
+					fName = ""
+				}
+			}
 			req, err := http.NewRequest(http.MethodGet, blobURL, nil)
 			if err != nil {
 				return err
@@ -48,6 +57,10 @@ func (s *Server) handleUpload() http.HandlerFunc {
 			}
 		}
 		log.Printf("%s - %d", cType, len(content))
-		return "OK"
+		u, err := model.GetUser(s.user(r.Context()))
+		if err != nil {
+			return err
+		}
+		return u.AddMedia(fName, cType, content)
 	})
 }

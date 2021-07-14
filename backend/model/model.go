@@ -61,6 +61,9 @@ func getDB(user string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	if openedDBs == nil {
+		openedDBs = make(map[string]*DB)
+	}
 	openedDBs[user] = &DB{db: db, lastAccess: time.Now().UTC()}
 	go func() {
 		for {
@@ -78,6 +81,9 @@ func getDB(user string) (*sql.DB, error) {
 		}
 		log.Printf("Closing %s DB", user)
 		db.Close()
+		dbLock.Lock()
+		defer dbLock.Unlock()
+		delete(openedDBs, user)
 	}()
 
 	// check migrations
@@ -87,7 +93,7 @@ func getDB(user string) (*sql.DB, error) {
 	}
 	tdb := len(dbMigrations)
 	if tdb > u.Schema {
-		for i := u.Schema; i <= tdb; i++ {
+		for i := u.Schema; i < tdb; i++ {
 			_, err = db.Exec(dbMigrations[i])
 			if err != nil {
 				return nil, err

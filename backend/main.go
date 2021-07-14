@@ -1,3 +1,4 @@
+// +build json1
 package main
 
 import (

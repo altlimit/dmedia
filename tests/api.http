@@ -18,6 +18,7 @@ Content-Type: application/json
 ###
 
 POST {{baseUrl}}/api/upload
+Authorization: Basic test12:123
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
 
 
@@ -30,6 +31,7 @@ https://i.pinimg.com/236x/b0/1e/8d/b01e8d3165fe28957895ab08e2e10bd6--tasters-cho
 ###
 
 POST {{baseUrl}}/api/upload
+Authorization: Basic test12:123
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
 
 
@@ -37,5 +39,5 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jj
 Content-Disposition: form-data; name="file"; filename="test.jpg"
 Content-Type: image/jpeg
 
-< ./test.jpg
+< ./test2.jpg
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ--

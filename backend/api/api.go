@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,13 +13,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/altlimit/dmedia/model"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
+const (
+	KeyUser ctxKey = "user"
+)
+
 // Server defines how api request is handled
 type (
+	ctxKey string
 	Server struct {
 		router   *mux.Router
 		validate *validator.Validate
@@ -37,6 +44,10 @@ type (
 		Result interface{} `json:"result"`
 		Pages  int         `json:"pages"`
 	}
+)
+
+var (
+	errAuth = fmt.Errorf("not logged in")
 )
 
 // Error validation error
@@ -147,6 +158,8 @@ func (s *Server) writeError(w http.ResponseWriter, err error) bool {
 	} else if _, ok := err.(*json.SyntaxError); ok {
 		log.Printf("JsonSyntaxError: %v", err)
 		code = http.StatusBadRequest
+	} else if err == errAuth {
+		code = http.StatusUnauthorized
 	} else {
 		log.Printf("InternalError: %v", err)
 	}
@@ -225,8 +238,35 @@ func (s *Server) cursor(list interface{}, pages int) interface{} {
 
 func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			log.Println("basic auth not provided")
+			s.writeError(w, errAuth)
+			return
+		} else {
+			u, err := model.GetUser(user)
+			if err != nil {
+				s.writeError(w, err)
+				return
+			}
+			if !u.ValidPassword(pass) {
+				log.Println("invalid password")
+				s.writeError(w, newValidationErr("password", "invalid"))
+				return
+			}
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, KeyUser, u.Name)
+			r = r.WithContext(ctx)
+		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) user(ctx context.Context) string {
+	if user, ok := ctx.Value(KeyUser).(string); ok {
+		return user
+	}
+	return ""
 }
 
 // QueryParam returns query parameter by name
