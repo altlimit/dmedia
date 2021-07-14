@@ -13,7 +13,7 @@ func init() {
 			path text,
 			date text,
 			size integer,
-			exif json
+			exif json,
 			meta json
 		);
 		create index idx_date on media(date);

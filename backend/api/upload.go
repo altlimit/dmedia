@@ -62,6 +62,10 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return u.AddMedia(fName, cType, content)
+		id, err := u.AddMedia(fName, cType, content)
+		if err != nil {
+			return err
+		}
+		return id
 	})
 }

@@ -21,6 +21,8 @@ var (
 	dbLock    sync.Mutex
 	mdbLock   sync.Mutex
 	mData     *mainData
+
+	ErrNotFound = fmt.Errorf("not found")
 )
 
 type (
@@ -33,6 +35,7 @@ type (
 		Name     string `json:"username"`
 		Password string `json:"password"`
 		Schema   int    `json:"schema"`
+		IsAdmin  bool   `json:"admin"`
 	}
 
 	mainData struct {
@@ -127,7 +130,7 @@ func GetUser(username string) (*User, error) {
 			return v, nil
 		}
 	}
-	return nil, fmt.Errorf("User: %s not found", username)
+	return nil, ErrNotFound
 }
 
 func saveUser(user *User) error {
@@ -162,13 +165,28 @@ func loadMainData() error {
 		mData = &mainData{Users: make([]*User, 0)}
 		dp := dataPath("")
 		mdp := filepath.Join(dp, "main.json")
-		if util.FileExists(mdp) {
-			dat, err := ioutil.ReadFile(mdp)
+		if !util.FileExists(mdp) {
+			admin := &User{IsAdmin: true, Name: "admin"}
+			pw, err := uid.Generate()
 			if err != nil {
 				return err
 			}
-			return json.Unmarshal(dat, mData)
+			admin.SetPassword(pw)
+			mData.Users = append(mData.Users, admin)
+			dat, err := json.Marshal(mData)
+			if err != nil {
+				return err
+			}
+			if err := ioutil.WriteFile(mdp, dat, 0644); err != nil {
+				return err
+			}
+			log.Printf("Created User: %s / %s", admin.Name, pw)
 		}
+		dat, err := ioutil.ReadFile(mdp)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(dat, mData)
 	}
 	return nil
 }

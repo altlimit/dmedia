@@ -99,8 +99,12 @@ func NewServer() *Server {
 	sr := r.PathPrefix("/api").Subrouter()
 	sr.Use(srv.auth)
 
+	sr.HandleFunc("/auth", srv.handleAuth()).Methods(http.MethodGet)
 	sr.HandleFunc("/users", srv.handleCreateUser()).Methods(http.MethodPost)
 	sr.HandleFunc("/users", srv.handleGetUser()).Methods(http.MethodGet)
+
+	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)
+	sr.HandleFunc("/media/{id}", srv.handleGetMedia()).Methods(http.MethodGet)
 
 	sr.HandleFunc("/upload", srv.handleUpload()).Methods(http.MethodPost)
 
@@ -252,12 +256,15 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			return
 		} else {
 			u, err := model.GetUser(user)
+			if err == model.ErrNotFound {
+				s.writeError(w, newValidationErr("username", "invalid"))
+				return
+			}
 			if err != nil {
 				s.writeError(w, err)
 				return
 			}
 			if !u.ValidPassword(pass) {
-				log.Println("invalid password")
 				s.writeError(w, newValidationErr("password", "invalid"))
 				return
 			}
@@ -274,6 +281,17 @@ func (s *Server) user(ctx context.Context) string {
 		return user
 	}
 	return ""
+}
+
+func (s *Server) currentUser(ctx context.Context) *model.User {
+	user := s.user(ctx)
+	if user != "" {
+		u, err := model.GetUser(user)
+		if err == nil {
+			return u
+		}
+	}
+	return &model.User{}
 }
 
 // QueryParam returns query parameter by name

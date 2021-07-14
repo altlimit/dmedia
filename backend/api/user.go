@@ -12,6 +12,9 @@ func (s *Server) handleCreateUser() http.HandlerFunc {
 		Password string `json:"password" validate:"required"`
 	}
 	return s.handler(func(r *http.Request) interface{} {
+		if !s.currentUser(r.Context()).IsAdmin {
+			return errAuth
+		}
 		var req request
 		if err := s.bind(r, &req); err != nil {
 			return err
@@ -24,10 +27,19 @@ func (s *Server) handleCreateUser() http.HandlerFunc {
 
 func (s *Server) handleGetUser() http.HandlerFunc {
 	return s.handler(func(r *http.Request) interface{} {
+		if !s.currentUser(r.Context()).IsAdmin {
+			return errAuth
+		}
 		users, err := model.GetUsers()
 		if err != nil {
 			return err
 		}
 		return users
+	})
+}
+
+func (s *Server) handleAuth() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		return "OK"
 	})
 }

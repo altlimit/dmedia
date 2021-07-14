@@ -1,19 +1,26 @@
 @baseUrl = http://localhost:5454
-@auth = Basic test12:123
+@auth = Basic admin:123
+
+###
+
+GET {{baseUrl}}/api/auth
+Authorization: {{auth}}
 
 ###
 
 POST {{baseUrl}}/api/users
+Authorization: {{auth}}
 Content-Type: application/json
 
 {
-    "username": "test12",
+    "username": "admin",
     "password": "123"
 }
 
 ###
 
 GET {{baseUrl}}/api/users
+Authorization: {{auth}}
 Content-Type: application/json
 
 ###
@@ -45,8 +52,6 @@ Content-Type: image/jpeg
 
 ###
 
-###
-
 POST {{baseUrl}}/api/upload
 Authorization: {{auth}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
@@ -67,6 +72,16 @@ Authorization: {{auth}}
 ###
 
 GET {{baseUrl}}/test12/2021-07/YF8eDKT4p.mp4?size=120
+Authorization: {{auth}}
+
+###
+
+GET {{baseUrl}}/api/media
+Authorization: {{auth}}
+
+###
+
+GET {{baseUrl}}/api/media/2
 Authorization: {{auth}}
 
 ###
