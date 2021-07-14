@@ -9,6 +9,7 @@ func init() {
 		create table media (
 			id integer not null primary key autoincrement, 
 			name text,
+			ctype text,
 			path text,
 			date text,
 			size integer,

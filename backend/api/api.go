@@ -47,7 +47,8 @@ type (
 )
 
 var (
-	errAuth = fmt.Errorf("not logged in")
+	errAuth     = fmt.Errorf("not logged in")
+	errNotFound = fmt.Errorf("not found")
 )
 
 // Error validation error
@@ -102,6 +103,10 @@ func NewServer() *Server {
 	sr.HandleFunc("/users", srv.handleGetUser()).Methods(http.MethodGet)
 
 	sr.HandleFunc("/upload", srv.handleUpload()).Methods(http.MethodPost)
+
+	dlr := r.PathPrefix("/{user}/{date}/{file}").Subrouter()
+	dlr.Use(srv.auth)
+	dlr.HandleFunc("", srv.handleDownload()).Methods(http.MethodGet)
 
 	return srv
 }
@@ -160,6 +165,8 @@ func (s *Server) writeError(w http.ResponseWriter, err error) bool {
 		code = http.StatusBadRequest
 	} else if err == errAuth {
 		code = http.StatusUnauthorized
+	} else if err == errNotFound {
+		code = http.StatusNotFound
 	} else {
 		log.Printf("InternalError: %v", err)
 	}

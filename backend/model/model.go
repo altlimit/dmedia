@@ -7,11 +7,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/altlimit/dmedia/util"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -39,8 +40,11 @@ type (
 	}
 )
 
-func dataPath() string {
-	dp := path.Join("..", "data")
+func dataPath(user string) string {
+	dp := util.DataPath
+	if user != "" {
+		dp = filepath.Join(dp, user)
+	}
 	os.MkdirAll(dp, os.ModeDir)
 	return dp
 }
@@ -55,7 +59,7 @@ func getDB(user string) (*sql.DB, error) {
 	}
 
 	log.Printf("Opening %s DB", user)
-	p := path.Join(dataPath(), user+".db")
+	p := filepath.Join(dataPath(user), "media.db")
 	db, err := sql.Open("sqlite3", p)
 	db.SetMaxOpenConns(1)
 	if err != nil {
@@ -148,7 +152,7 @@ func saveUser(user *User) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path.Join(dataPath(), "main.json"), dat, 0644)
+	return ioutil.WriteFile(filepath.Join(dataPath(""), "main.json"), dat, 0644)
 }
 
 func loadMainData() error {
@@ -156,9 +160,9 @@ func loadMainData() error {
 		mdbLock.Lock()
 		defer mdbLock.Unlock()
 		mData = &mainData{Users: make([]*User, 0)}
-		dp := dataPath()
-		mdp := path.Join(dp, "main.json")
-		if fileExists(mdp) {
+		dp := dataPath("")
+		mdp := filepath.Join(dp, "main.json")
+		if util.FileExists(mdp) {
 			dat, err := ioutil.ReadFile(mdp)
 			if err != nil {
 				return err
@@ -167,11 +171,4 @@ func loadMainData() error {
 		}
 	}
 	return nil
-}
-
-func fileExists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
-	return true
 }

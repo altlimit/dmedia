@@ -3,14 +3,30 @@ package model
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/rwcarlsen/goexif/exif"
 	"github.com/rwcarlsen/goexif/tiff"
+	"github.com/teris-io/shortid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var (
+	uid *shortid.Shortid
+)
+
+func init() {
+	sid, err := shortid.New(1, shortid.DefaultABC, 2342)
+	if err != nil {
+		panic(err)
+	}
+	uid = sid
+}
 
 type ExifData struct {
 	Data map[string]*tiff.Tag
@@ -89,7 +105,20 @@ func (u *User) AddMedia(name string, cType string, content []byte) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = db.Exec("insert into media(name, path, date, size, exif) values(?, ?, ?, ?, ?)",
-		name, "", dt, len(content), exd)
+	ext := filepath.Ext(name)
+	log.Printf("Ext: %v", ext)
+	p, err := uid.Generate()
+	if err != nil {
+		return err
+	}
+	dp := dataPath(u.Name)
+	pDir := filepath.Join(dp, dt[0:7])
+	os.MkdirAll(pDir, os.ModeDir)
+	pFile := filepath.Join(pDir, p+ext)
+	if err := ioutil.WriteFile(pFile, content, 0644); err != nil {
+		return err
+	}
+	_, err = db.Exec("insert into media(name, ctype, path, date, size, exif) values(?, ?, ?, ?, ?, ?)",
+		name, cType, filepath.Join(dt[0:7], p+ext), dt, len(content), exd)
 	return err
 }

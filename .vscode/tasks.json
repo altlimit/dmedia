@@ -9,7 +9,10 @@
       "command": "CompileDaemon -command ./dmedia",
       "problemMatcher": [],
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}/backend",
+        "env": {
+          "FFMPEG_BIN": "D:\\Applications\\ffmpeg\\bin\\ffmpeg.exe"
+        }
       }
     }
   ]

@@ -2,7 +2,6 @@ package api
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"path"
 
@@ -56,7 +55,9 @@ func (s *Server) handleUpload() http.HandlerFunc {
 				return err
 			}
 		}
-		log.Printf("%s - %d", cType, len(content))
+		if fName == "" {
+			return newValidationErr("name", "required")
+		}
 		u, err := model.GetUser(s.user(r.Context()))
 		if err != nil {
 			return err

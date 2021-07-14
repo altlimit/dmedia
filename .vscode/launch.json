@@ -10,7 +10,10 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/backend/main.go",
-            "cwd": "${workspaceFolder}/backend"
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "FFMPEG_BIN": "D:\\Applications\\ffmpeg\\bin\\ffmpeg.exe"
+            }
         }
 
     ]

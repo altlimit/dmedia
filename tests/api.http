@@ -1,4 +1,5 @@
 @baseUrl = http://localhost:5454
+@auth = Basic test12:123
 
 ###
 
@@ -18,7 +19,7 @@ Content-Type: application/json
 ###
 
 POST {{baseUrl}}/api/upload
-Authorization: Basic test12:123
+Authorization: {{auth}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
 
 
@@ -31,7 +32,7 @@ https://i.pinimg.com/236x/b0/1e/8d/b01e8d3165fe28957895ab08e2e10bd6--tasters-cho
 ###
 
 POST {{baseUrl}}/api/upload
-Authorization: Basic test12:123
+Authorization: {{auth}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
 
 
@@ -41,3 +42,31 @@ Content-Type: image/jpeg
 
 < ./test2.jpg
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
+
+###
+
+###
+
+POST {{baseUrl}}/api/upload
+Authorization: {{auth}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
+
+
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ
+Content-Disposition: form-data; name="file"; filename="test3.mp4"
+Content-Type: video/mp4
+
+< ./test3.mp4
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
+
+###
+
+GET {{baseUrl}}/test12/2021-06/fhvMHdH4M.jpg
+Authorization: {{auth}}
+
+###
+
+GET {{baseUrl}}/test12/2021-07/YF8eDKT4p.mp4?size=120
+Authorization: {{auth}}
+
+###
