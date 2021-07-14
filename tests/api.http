@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5454
-@auth = Basic admin:123
+@auth = Basic notadmin:123
 
 ###
 
@@ -14,7 +14,8 @@ Content-Type: application/json
 
 {
     "username": "admin",
-    "password": "123"
+    "password": "123",
+    "admin": false
 }
 
 ###

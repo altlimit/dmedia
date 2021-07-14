@@ -100,7 +100,7 @@ func NewServer() *Server {
 	sr.Use(srv.auth)
 
 	sr.HandleFunc("/auth", srv.handleAuth()).Methods(http.MethodGet)
-	sr.HandleFunc("/users", srv.handleCreateUser()).Methods(http.MethodPost)
+	sr.HandleFunc("/users", srv.handleSaveUser()).Methods(http.MethodPost)
 	sr.HandleFunc("/users", srv.handleGetUser()).Methods(http.MethodGet)
 
 	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)

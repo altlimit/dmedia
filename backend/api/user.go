@@ -6,21 +6,32 @@ import (
 	"github.com/altlimit/dmedia/model"
 )
 
-func (s *Server) handleCreateUser() http.HandlerFunc {
+func (s *Server) handleSaveUser() http.HandlerFunc {
 	type request struct {
 		Username string `json:"username" validate:"required,username"`
 		Password string `json:"password" validate:"required"`
+		Admin    bool   `json:"admin"`
 	}
 	return s.handler(func(r *http.Request) interface{} {
-		if !s.currentUser(r.Context()).IsAdmin {
-			return errAuth
-		}
 		var req request
-		if err := s.bind(r, &req); err != nil {
+		err := s.bind(r, &req)
+		if err != nil {
 			return err
 		}
-		u := &model.User{Name: req.Username}
-		u.SetPassword(req.Password)
+		ctx := r.Context()
+		u := s.currentUser(ctx)
+		if u.IsAdmin {
+			u, err = model.GetUser(req.Username)
+			if err == model.ErrNotFound {
+				u = &model.User{Name: req.Username}
+			}
+			u.SetPassword(req.Password)
+			u.IsAdmin = req.Admin
+		} else if u.Name == req.Username {
+			u.SetPassword(req.Password)
+		} else {
+			return errAuth
+		}
 		return u.Save()
 	})
 }
