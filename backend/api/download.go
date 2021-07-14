@@ -29,14 +29,6 @@ func resizeImage(w io.Writer, fPath string, width uint) error {
 	file.Close()
 
 	m := resizer.Resize(width, 0, img, resizer.Lanczos3)
-
-	// Don't write the file..
-	/*out, err := os.Create(ImageName + "_t" + strconv.Itoa(int(Width)) + ".jpg")
-	if err != nil {
-			log.Fatal(err)
-	}
-	defer out.Close()*/
-
 	return jpeg.Encode(w, m, nil)
 }
 

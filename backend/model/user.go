@@ -41,7 +41,6 @@ type (
 		Path        string                 `json:"path"`
 		Date        time.Time              `json:"date"`
 		Size        int                    `json:"size"`
-		Exif        map[string]interface{} `json:"exif"`
 		Meta        map[string]interface{} `json:"meta"`
 	}
 	ExifData struct {
@@ -141,7 +140,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	if isVideo {
 		exd = util.VideoInfo(pFile)
 	}
-	res, err := db.Exec("insert into media(name, ctype, path, date, size, exif) values(?, ?, ?, ?, ?, ?)",
+	res, err := db.Exec("insert into media(name, ctype, path, date, size, meta) values(?, ?, ?, ?, ?, ?)",
 		name, cType, path.Join(dt[0:7], p+ext), dt, len(content), exd)
 	if err != nil {
 		return 0, err
@@ -155,7 +154,7 @@ func (u *User) GetAllMedia(page int, limit int) ([]*Media, int, error) {
 		return nil, 0, err
 	}
 	row, err := db.Query(fmt.Sprintf(`
-		SELECT id, name, ctype, path, date, size, exif, meta 
+		SELECT id, name, ctype, path, date, size, meta 
 		FROM media 
 		ORDER BY date DESC
 		LIMIT %d
@@ -187,7 +186,7 @@ func (u *User) GetMediaByID(id int) (*Media, error) {
 		return nil, err
 	}
 	row, err := db.Query(`
-		SELECT id, name, ctype, path, date, size, exif, meta 
+		SELECT id, name, ctype, path, date, size, meta 
 		FROM media 
 		WHERE id = ?
 		LIMIT 1
@@ -207,11 +206,10 @@ func (u *User) GetMediaByID(id int) (*Media, error) {
 }
 
 func getRowMedia(row *sql.Rows) (*Media, error) {
-	m := &Media{Exif: make(map[string]interface{}), Meta: make(map[string]interface{})}
+	m := &Media{Meta: make(map[string]interface{})}
 	var date string
-	var exif sql.NullString
 	var meta sql.NullString
-	if err := row.Scan(&m.ID, &m.Name, &m.ContentType, &m.Path, &date, &m.Size, &exif, &meta); err != nil {
+	if err := row.Scan(&m.ID, &m.Name, &m.ContentType, &m.Path, &date, &m.Size, &meta); err != nil {
 		return nil, err
 	}
 	dt, err := time.Parse(dtFormat, date)
@@ -219,12 +217,6 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 		return nil, err
 	}
 	m.Date = dt
-	if exif.Valid && len(exif.String) > 0 {
-		log.Println("Exif: ", exif.String)
-		if err := json.Unmarshal([]byte(exif.String), &m.Exif); err != nil {
-			return nil, err
-		}
-	}
 	if meta.Valid && len(meta.String) > 0 {
 		if err := json.Unmarshal([]byte(meta.String), &m.Meta); err != nil {
 			return nil, err
