@@ -12,7 +12,8 @@
             "program": "${workspaceFolder}/backend/main.go",
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "FFMPEG_BIN": "D:\\Applications\\ffmpeg\\bin\\ffmpeg.exe"
+                "FFMPEG_BIN": "D:\\Applications\\ffmpeg\\bin\\ffmpeg.exe",
+                "FFPROBE_BIN": "D:\\Applications\\ffmpeg\\bin\\ffprobe.exe"
             }
         }
 

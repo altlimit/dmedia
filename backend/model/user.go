@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/altlimit/dmedia/util"
 	"github.com/rwcarlsen/goexif/exif"
 	"github.com/rwcarlsen/goexif/tiff"
 	"github.com/teris-io/shortid"
@@ -80,7 +81,8 @@ func (u *User) Save() error {
 // AddMedia adds new media to table
 func (u *User) AddMedia(name string, cType string, content []byte) (int64, error) {
 	var (
-		exd string
+		exd     string
+		isVideo bool
 	)
 	dt := time.Now().UTC().Format(dtFormat)
 	if strings.Index(cType, "image/") == 0 {
@@ -112,6 +114,10 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 				}
 			}
 		}
+	} else if strings.Index(cType, "video/") == 0 {
+		isVideo = true
+	} else {
+		return 0, ErrNotSupported
 	}
 	db, err := getDB(u.Name)
 	if err != nil {
@@ -131,6 +137,9 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	pFile := filepath.Join(pDir, p+ext)
 	if err := ioutil.WriteFile(pFile, content, 0644); err != nil {
 		return 0, err
+	}
+	if isVideo {
+		exd = util.VideoInfo(pFile)
 	}
 	res, err := db.Exec("insert into media(name, ctype, path, date, size, exif) values(?, ?, ?, ?, ?, ?)",
 		name, cType, path.Join(dt[0:7], p+ext), dt, len(content), exd)

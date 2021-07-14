@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	DataPath  string
-	ffmpegBin string
+	DataPath   string
+	ffmpegBin  string
+	ffprobeBin string
 )
 
 func init() {
@@ -22,6 +23,10 @@ func init() {
 	if ffmpegBin == "" {
 		panic(fmt.Errorf("FFMPEG_BIN set path of ffmpeg binary"))
 	}
+	ffprobeBin = os.Getenv("FFPROBE_BIN")
+	if ffprobeBin == "" {
+		panic(fmt.Errorf("FFPROBE_BIN set path of ffprobe binary"))
+	}
 }
 
 func FileExists(path string) bool {
@@ -32,7 +37,6 @@ func FileExists(path string) bool {
 }
 
 func Thumbnail(input string) error {
-	log.Printf("Genering thumb %s", input)
 	out, err := exec.Command(ffmpegBin, "-i", input, "-ss", "00:00:01.000", "-vframes", "1", input+".jpg").Output()
 	if err != nil {
 		return err
@@ -41,4 +45,16 @@ func Thumbnail(input string) error {
 		log.Printf("Thumbnail: %s", string(out))
 	}
 	return nil
+}
+
+func VideoInfo(input string) string {
+	out, err := exec.Command(ffprobeBin, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", input).Output()
+	if err != nil {
+		log.Printf("VideoInfo: Error %v", err)
+		return ""
+	}
+	if len(out) > 0 {
+		return string(out)
+	}
+	return ""
 }

@@ -22,7 +22,8 @@ var (
 	mdbLock   sync.Mutex
 	mData     *mainData
 
-	ErrNotFound = fmt.Errorf("not found")
+	ErrNotFound     = fmt.Errorf("not found")
+	ErrNotSupported = fmt.Errorf("not supported")
 )
 
 type (
