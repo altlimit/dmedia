@@ -10,7 +10,7 @@ func (s *Server) handleSaveUser() http.HandlerFunc {
 	type request struct {
 		Username string `json:"username" validate:"required,username"`
 		Password string `json:"password" validate:"required"`
-		Admin    bool   `json:"admin"`
+		Admin    *bool  `json:"admin"`
 	}
 	return s.handler(func(r *http.Request) interface{} {
 		var req request
@@ -26,7 +26,9 @@ func (s *Server) handleSaveUser() http.HandlerFunc {
 				u = &model.User{Name: req.Username}
 			}
 			u.SetPassword(req.Password)
-			u.IsAdmin = req.Admin
+			if req.Admin != nil {
+				u.IsAdmin = *req.Admin
+			}
 		} else if u.Name == req.Username {
 			u.SetPassword(req.Password)
 		} else {

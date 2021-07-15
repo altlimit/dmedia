@@ -2,6 +2,7 @@ package model
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -20,9 +21,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	mediaFields = `
+		id, name, public, checksum, ctype, path, 
+		strftime('%Y-%m-%d', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified, 
+		size, meta`
+)
+
 var (
-	uid      *shortid.Shortid
-	dtFormat = "2006-01-02T15:04:05.000Z"
+	uid             *shortid.Shortid
+	dateFormat      = "2006-01-02"
+	dateTimeFormat  = "2006-01-02 15:04:05"
+	sDateTimeFormat = "2006-01-02T15:04:05.000Z"
 )
 
 func init() {
@@ -37,9 +47,12 @@ type (
 	Media struct {
 		ID          int64                  `json:"id"`
 		Name        string                 `json:"name"`
+		Public      bool                   `json:"public"`
+		Checksum    string                 `json:"checksum"`
 		ContentType string                 `json:"ctype"`
 		Path        string                 `json:"path"`
-		Date        time.Time              `json:"date"`
+		Created     time.Time              `json:"created"`
+		Modified    time.Time              `json:"modified"`
 		Size        int                    `json:"size"`
 		Meta        map[string]interface{} `json:"meta"`
 	}
@@ -83,7 +96,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 		exd     string
 		isVideo bool
 	)
-	dt := time.Now().UTC().Format(dtFormat)
+	created := time.Now().UTC().Format(dateFormat)
 	if strings.Index(cType, "image/") == 0 {
 		// read exif info
 		x, err := exif.Decode(bytes.NewReader(content))
@@ -93,7 +106,10 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 				return 0, err
 			}
 			if len(ed.Data) > 0 {
-				ex, err := json.Marshal(ed.Data)
+				mapData := map[string]interface{}{
+					"exif": ed.Data,
+				}
+				ex, err := json.Marshal(mapData)
 				if err != nil {
 					return 0, err
 				}
@@ -105,7 +121,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 						if err == nil {
 							t, err := time.Parse("2006:01:02 15:04:05", dts)
 							if err == nil {
-								dt = t.Format(dtFormat)
+								created = t.Format(dateFormat)
 								break
 							}
 						}
@@ -131,7 +147,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 		return 0, err
 	}
 	dp := dataPath(u.Name)
-	pDir := filepath.Join(dp, dt[0:7])
+	pDir := filepath.Join(dp, created[0:7])
 	os.MkdirAll(pDir, os.ModeDir)
 	pFile := filepath.Join(pDir, p+ext)
 	if err := ioutil.WriteFile(pFile, content, 0644); err != nil {
@@ -140,9 +156,20 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	if isVideo {
 		exd = util.VideoInfo(pFile)
 	}
-	res, err := db.Exec("insert into media(name, ctype, path, date, size, meta) values(?, ?, ?, ?, ?, ?)",
-		name, cType, path.Join(dt[0:7], p+ext), dt, len(content), exd)
+	chk := fmt.Sprintf("%x", sha1.Sum(content))
+	res, err := db.Exec(`
+		insert into media(name, ctype, path, checksum, created, size, meta, modified) 
+		values(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		name, cType, path.Join(created[0:7], p+ext), chk, created, len(content), exd)
 	if err != nil {
+		if err.Error() == "UNIQUE constraint failed: media.checksum" {
+			r := db.QueryRow(`SELECT id FROM media WHERE checksum = ?`, chk)
+			var id int64
+			if err := r.Scan(&id); err != nil {
+				return 0, err
+			}
+			return id, nil
+		}
 		return 0, err
 	}
 	return res.LastInsertId()
@@ -154,12 +181,12 @@ func (u *User) GetAllMedia(page int, limit int) ([]*Media, int, error) {
 		return nil, 0, err
 	}
 	row, err := db.Query(fmt.Sprintf(`
-		SELECT id, name, ctype, path, date, size, meta 
+		SELECT %s
 		FROM media 
-		ORDER BY date DESC
+		ORDER BY id DESC
 		LIMIT %d
 		OFFSET %d
-	`, limit, (limit*page)-limit))
+	`, mediaFields, limit, (limit*page)-limit))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -185,12 +212,12 @@ func (u *User) GetMediaByID(id int) (*Media, error) {
 	if err != nil {
 		return nil, err
 	}
-	row, err := db.Query(`
-		SELECT id, name, ctype, path, date, size, meta 
+	row, err := db.Query(fmt.Sprintf(`
+		SELECT %s
 		FROM media 
 		WHERE id = ?
 		LIMIT 1
-	`, id)
+	`, mediaFields), id)
 	if err != nil {
 		return nil, err
 	}
@@ -207,16 +234,26 @@ func (u *User) GetMediaByID(id int) (*Media, error) {
 
 func getRowMedia(row *sql.Rows) (*Media, error) {
 	m := &Media{Meta: make(map[string]interface{})}
-	var date string
-	var meta sql.NullString
-	if err := row.Scan(&m.ID, &m.Name, &m.ContentType, &m.Path, &date, &m.Size, &meta); err != nil {
+	var (
+		created  string
+		modified string
+		meta     sql.NullString
+		public   int
+	)
+	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &m.Path, &created, &modified, &m.Size, &meta); err != nil {
 		return nil, err
 	}
-	dt, err := time.Parse(dtFormat, date)
+	dt, err := time.Parse(dateFormat, created)
 	if err != nil {
 		return nil, err
 	}
-	m.Date = dt
+	m.Created = dt
+	dt, err = time.Parse(dateTimeFormat, modified)
+	if err != nil {
+		return nil, err
+	}
+	m.Modified = dt
+	m.Public = public == 1
 	if meta.Valid && len(meta.String) > 0 {
 		if err := json.Unmarshal([]byte(meta.String), &m.Meta); err != nil {
 			return nil, err

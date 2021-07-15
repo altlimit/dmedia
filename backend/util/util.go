@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -54,6 +55,19 @@ func VideoInfo(input string) string {
 		return ""
 	}
 	if len(out) > 0 {
+		info := make(map[string]interface{})
+		if err := json.Unmarshal(out, &info); err != nil {
+			log.Printf("VideoInfo: UnmarshalError %v", err)
+			return ""
+		}
+		wrapped := map[string]interface{}{
+			"info": info,
+		}
+		out, err = json.Marshal(wrapped)
+		if err != nil {
+			log.Printf("VideoInfo: MarshalError %v", err)
+			return ""
+		}
 		return string(out)
 	}
 	return ""
