@@ -7,6 +7,10 @@ select * from media;
 
 ---
 
+select * from migrations;
+
+---
+
 select strftime('%Y-%m-%d', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified from media;
 
 ---

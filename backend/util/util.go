@@ -2,7 +2,6 @@ package util
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -10,23 +9,13 @@ import (
 )
 
 var (
-	DataPath   string
-	ffmpegBin  string
-	ffprobeBin string
+	DataPath string
 )
 
 func init() {
 	DataPath = os.Getenv("DATA_PATH")
 	if DataPath == "" {
 		DataPath = filepath.Join("..", "data")
-	}
-	ffmpegBin = os.Getenv("FFMPEG_BIN")
-	if ffmpegBin == "" {
-		panic(fmt.Errorf("FFMPEG_BIN set path of ffmpeg binary"))
-	}
-	ffprobeBin = os.Getenv("FFPROBE_BIN")
-	if ffprobeBin == "" {
-		panic(fmt.Errorf("FFPROBE_BIN set path of ffprobe binary"))
 	}
 }
 
@@ -38,7 +27,7 @@ func FileExists(path string) bool {
 }
 
 func Thumbnail(input string) error {
-	out, err := exec.Command(ffmpegBin, "-i", input, "-ss", "00:00:01.000", "-vframes", "1", input+".jpg").Output()
+	out, err := exec.Command("ffmpeg", "-i", input, "-ss", "00:00:01.000", "-vframes", "1", input+".jpg").Output()
 	if err != nil {
 		return err
 	}
@@ -48,27 +37,19 @@ func Thumbnail(input string) error {
 	return nil
 }
 
-func VideoInfo(input string) string {
-	out, err := exec.Command(ffprobeBin, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", input).Output()
+func VideoInfo(input string) map[string]interface{} {
+	out, err := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", input).Output()
 	if err != nil {
 		log.Printf("VideoInfo: Error %v", err)
-		return ""
+		return nil
 	}
 	if len(out) > 0 {
 		info := make(map[string]interface{})
 		if err := json.Unmarshal(out, &info); err != nil {
 			log.Printf("VideoInfo: UnmarshalError %v", err)
-			return ""
+			return nil
 		}
-		wrapped := map[string]interface{}{
-			"info": info,
-		}
-		out, err = json.Marshal(wrapped)
-		if err != nil {
-			log.Printf("VideoInfo: MarshalError %v", err)
-			return ""
-		}
-		return string(out)
+		return info
 	}
-	return ""
+	return nil
 }

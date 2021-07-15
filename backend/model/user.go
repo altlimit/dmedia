@@ -45,16 +45,21 @@ func init() {
 
 type (
 	Media struct {
-		ID          int64                  `json:"id"`
-		Name        string                 `json:"name"`
-		Public      bool                   `json:"public"`
-		Checksum    string                 `json:"checksum"`
-		ContentType string                 `json:"ctype"`
-		Path        string                 `json:"path"`
-		Created     time.Time              `json:"created"`
-		Modified    time.Time              `json:"modified"`
-		Size        int                    `json:"size"`
-		Meta        map[string]interface{} `json:"meta"`
+		ID          int64     `json:"id"`
+		Name        string    `json:"name"`
+		Public      bool      `json:"public"`
+		Checksum    string    `json:"checksum"`
+		ContentType string    `json:"ctype"`
+		Path        string    `json:"path"`
+		Created     time.Time `json:"created"`
+		Modified    time.Time `json:"modified"`
+		Size        int       `json:"size"`
+		Meta        *Meta     `json:"meta"`
+	}
+
+	Meta struct {
+		Exif interface{} `json:"exif,omitempty"`
+		Info interface{} `json:"info,omitempty"`
 	}
 	ExifData struct {
 		Data map[string]*tiff.Tag
@@ -95,6 +100,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	var (
 		exd     string
 		isVideo bool
+		meta    *Meta
 	)
 	created := time.Now().UTC().Format(dateFormat)
 	if strings.Index(cType, "image/") == 0 {
@@ -106,14 +112,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 				return 0, err
 			}
 			if len(ed.Data) > 0 {
-				mapData := map[string]interface{}{
-					"exif": ed.Data,
-				}
-				ex, err := json.Marshal(mapData)
-				if err != nil {
-					return 0, err
-				}
-				exd = string(ex)
+				meta = &Meta{Exif: ed.Data}
 				// find possible date
 				for k, v := range ed.Data {
 					if strings.Contains(k, "DateTime") {
@@ -154,7 +153,16 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 		return 0, err
 	}
 	if isVideo {
-		exd = util.VideoInfo(pFile)
+		if info := util.VideoInfo(pFile); info != nil {
+			meta = &Meta{Info: info}
+		}
+	}
+	if meta != nil {
+		ex, err := json.Marshal(meta)
+		if err != nil {
+			return 0, err
+		}
+		exd = string(ex)
 	}
 	chk := fmt.Sprintf("%x", sha1.Sum(content))
 	res, err := db.Exec(`
@@ -233,7 +241,7 @@ func (u *User) GetMediaByID(id int) (*Media, error) {
 }
 
 func getRowMedia(row *sql.Rows) (*Media, error) {
-	m := &Media{Meta: make(map[string]interface{})}
+	m := &Media{Meta: &Meta{}}
 	var (
 		created  string
 		modified string
@@ -255,7 +263,7 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 	m.Modified = dt
 	m.Public = public == 1
 	if meta.Valid && len(meta.String) > 0 {
-		if err := json.Unmarshal([]byte(meta.String), &m.Meta); err != nil {
+		if err := json.Unmarshal([]byte(meta.String), m.Meta); err != nil {
 			return nil, err
 		}
 	}

@@ -2,6 +2,11 @@ package model
 
 var (
 	dbMigrations []string
+
+	dbMigrateTable = `
+		CREATE TABLE migrations (version INTEGER NOT NULL);
+		INSERT INTO migrations (version) VALUES (0);
+	`
 )
 
 func init() {

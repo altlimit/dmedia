@@ -35,7 +35,6 @@ type (
 	User struct {
 		Name     string `json:"username"`
 		Password string `json:"password"`
-		Schema   int    `json:"schema"`
 		IsAdmin  bool   `json:"admin"`
 	}
 
@@ -95,22 +94,30 @@ func getDB(user string) (*sql.DB, error) {
 	}()
 
 	// check migrations
-	u, err := GetUser(user)
-	if err != nil {
-		return nil, err
-	}
 	tdb := len(dbMigrations)
-	if tdb > u.Schema {
-		for i := u.Schema; i < tdb; i++ {
+	r := db.QueryRow(`SELECT version FROM migrations`)
+	var version int
+	if err := r.Scan(&version); err != nil {
+		if err.Error() == "no such table: migrations" {
+			_, err = db.Exec(dbMigrateTable)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+	if tdb > version {
+		for i := version; i < tdb; i++ {
 			_, err = db.Exec(dbMigrations[i])
 			if err != nil {
 				return nil, err
 			}
 		}
-		u.Schema = tdb
-		if err := u.Save(); err != nil {
+		if _, err := db.Exec(`UPDATE migrations SET version = ?`, tdb); err != nil {
 			return nil, err
 		}
+		log.Printf("Migrated db to %d", tdb)
 	}
 	return db, nil
 }
