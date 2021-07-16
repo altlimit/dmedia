@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5454
-@auth = Basic user1:abc123
+@auth = Basic a:a
 
 ###
 
@@ -21,6 +21,17 @@ Content-Type: application/json
     "password": "123",
     "admin": true,
     "active": true
+}
+
+###
+
+PUT {{baseUrl}}/api/users/4
+Authorization: {{auth}}
+Content-Type: application/json
+
+{
+    "username": "a",
+    "password": "aa"
 }
 
 ###

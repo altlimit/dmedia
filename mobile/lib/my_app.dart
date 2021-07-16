@@ -3,7 +3,7 @@ import 'package:dmedia/store.dart';
 import 'package:dmedia/model.dart';
 import 'package:dmedia/preference.dart';
 import 'package:dmedia/settings_page.dart';
-import 'package:dmedia/login_page.dart';
+import 'package:dmedia/account_page.dart';
 import 'package:dmedia/main_page.dart';
 
 class MyApp extends StatefulWidget {
@@ -47,10 +47,10 @@ class MyAppState extends State<MyApp> with Store {
         theme: ThemeData(
             primarySwatch: Colors.blueGrey,
             brightness: _isDarkMode ? Brightness.dark : Brightness.light),
-        initialRoute: _selectedAccount == -1 ? '/login' : '/',
+        initialRoute: _selectedAccount == -1 ? '/account' : '/',
         routes: {
           '/': (context) => MainPage(),
-          '/login': (context) => LoginPage(),
+          '/account': (context) => AccountPage(),
           '/settings': (context) => SettingsPage(),
         });
   }

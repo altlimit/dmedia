@@ -11,6 +11,11 @@ class Preference {
     return _prefs;
   }
 
+  static void clear() {
+    _prefs!.clear();
+    _memoryPrefs.clear();
+  }
+
   static void setString(String key, String value) {
     _prefs!.setString(key, value);
     _memoryPrefs[key] = value;

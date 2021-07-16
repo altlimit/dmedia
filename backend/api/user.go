@@ -21,14 +21,19 @@ func (s *Server) handleCreateUser() http.HandlerFunc {
 		u := s.currentUser(ctx)
 		code := s.QueryParam(r, "code")
 		user := &model.User{Name: req.Name}
-		user.SetPassword(req.Password)
+		if err := user.SetPassword(req.Password); err != nil {
+			return err
+		}
 		if u.IsAdmin || code == adminCode {
 			user.Active = req.Active
-			user.IsAdmin = req.IsAdmin
+			user.IsAdmin = req.IsAdmin || code == adminCode
 		} else if code == userCode {
 			user.IsAdmin = false
 			user.Active = true
 		} else {
+			if code != "" {
+				return newValidationErr("code", "invalid")
+			}
 			return errAuth
 		}
 		if err := user.Save(); err != nil {
@@ -37,7 +42,8 @@ func (s *Server) handleCreateUser() http.HandlerFunc {
 			}
 			return err
 		}
-		return user.ID
+		user.Password = ""
+		return user
 	})
 }
 
@@ -59,7 +65,9 @@ func (s *Server) handleSaveUser() http.HandlerFunc {
 				user.Name = req.Name
 			}
 			if req.Password != "" {
-				user.Password = req.Password
+				if err := user.SetPassword(req.Password); err != nil {
+					return err
+				}
 			}
 			user.IsAdmin = req.IsAdmin
 			user.Active = req.IsAdmin
@@ -68,12 +76,18 @@ func (s *Server) handleSaveUser() http.HandlerFunc {
 				user.Name = req.Name
 			}
 			if req.Password != "" {
-				user.Password = req.Password
+				if err := user.SetPassword(req.Password); err != nil {
+					return err
+				}
 			}
 		} else {
 			return errAuth
 		}
-		return u.Save()
+		if err := user.Save(); err != nil {
+			return err
+		}
+		u.Password = ""
+		return u
 	})
 }
 
@@ -86,7 +100,7 @@ func (s *Server) handleGetUser() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return users
+		return s.cursor(users, 1)
 	})
 }
 

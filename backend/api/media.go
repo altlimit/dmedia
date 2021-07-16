@@ -42,6 +42,5 @@ func (s *Server) handleGetMedia() http.HandlerFunc {
 			return err
 		}
 		return media
-
 	})
 }

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:dmedia/preference.dart';
 import 'dart:convert';
@@ -9,19 +12,22 @@ const String settingsAccounts = 'accounts';
 const String settingsAccount = 'account';
 
 class Account {
+  int id = 0;
   String serverUrl = "";
   String username = "";
   String password = "";
   bool admin = false;
 
   Account(
-      {this.serverUrl = "",
+      {this.id = 0,
+      this.serverUrl = "",
       this.username = "",
       this.password = "",
       this.admin = false});
 
   Account.fromJson(Map<String, dynamic> json)
-      : serverUrl = json['serverUrl'],
+      : id = json['id'],
+        serverUrl = json['serverUrl'],
         username = json['username'],
         password = json['password'],
         admin = json['admin'];
@@ -30,7 +36,8 @@ class Account {
         'serverUrl': serverUrl,
         'username': username,
         'password': password,
-        'admin': admin
+        'admin': admin,
+        'id': id,
       };
 
   @override
@@ -46,28 +53,63 @@ class Client {
 
   Client(this.account);
 
-  Future<String> init() async {
+  Future<dynamic> request(String path, {dynamic data, String? method}) async {
     headers = {
-      "Authorization":
+      'Content-Type': 'application/json',
+      'Authorization': 'Basic ' +
           base64Encode(utf8.encode('${account.username}:${account.password}'))
     };
-    var urls = account.serverUrl.split("|");
-    for (var i = 0; i < urls.length; i++) {
+    http.Response resp;
+    try {
       if (selectedUrl.length == 0) {
-        var response = await http.get(Uri.parse(urls[i] + '/status'));
-        if (response.statusCode == 200) selectedUrl = urls[i];
+        var urls = account.serverUrl.split("|");
+        for (var i = 0; i < urls.length; i++) {
+          if (selectedUrl.length == 0) {
+            resp = await http
+                .get(Uri.parse(urls[i] + '/status'))
+                .timeout(Duration(seconds: 1));
+            if (resp.statusCode == 200) {
+              selectedUrl = urls[i];
+              break;
+            }
+          }
+        }
       }
+      var uri = Uri.parse(selectedUrl + path);
+      if (data != null) {
+        if (!isRelease) print('Payload: ' + json.encode(data));
+        var m = method == 'PUT' ? http.put : http.post;
+        resp = await m(uri, body: json.encode(data), headers: headers);
+      } else {
+        resp = await http.get(uri, headers: headers);
+      }
+      if (resp.statusCode != 200 || !isRelease) print('response: ' + resp.body);
+      return resp.body.length > 0 ? json.decode(resp.body) : null;
+    } on SocketException {
+      print('Not connected to internet');
+      return {'error': 'connection failed'};
+    } on TimeoutException {
+      print('Not connected to internet');
+      return {'error': 'connection timeout'};
+    } on FormatException {
+      return {'error': 'unexpected response'};
+    } on Exception catch (e) {
+      print('Error: ' + e.toString());
+      return {'error': e.toString()};
     }
-    return selectedUrl;
   }
 
-  Future<Map<String, dynamic>> auth() async {
-    var response =
-        await http.post(Uri.parse(selectedUrl + '/auth'), headers: headers);
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
+  Map<String, String>? checkError(Map<String, dynamic>? data) {
+    if (data != null &&
+        data.containsKey('error') &&
+        data.containsKey('params') &&
+        data['error'] == 'validation') {
+      return (data['params'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, v.toString()));
     }
-    return {};
+    return data != null && data.containsKey('error')
+        ? {'message': data['error']}
+        : null;
   }
 }
 

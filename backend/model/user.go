@@ -39,7 +39,7 @@ var (
 type (
 	User struct {
 		ID       int64  `json:"id"`
-		Name     string `json:"username" validate:"required,username"`
+		Name     string `json:"username" validate:"required"`
 		Password string `json:"password,omitempty"`
 		IsAdmin  bool   `json:"admin"`
 		Active   bool   `json:"active"`

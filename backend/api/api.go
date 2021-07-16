@@ -108,7 +108,7 @@ func NewServer() *Server {
 
 	sr.HandleFunc("/auth", srv.handleAuth()).Methods(http.MethodGet)
 	sr.HandleFunc("/users", srv.handleCreateUser()).Methods(http.MethodPost)
-	sr.HandleFunc("/users", srv.handleSaveUser()).Methods(http.MethodPut)
+	sr.HandleFunc("/users/{id}", srv.handleSaveUser()).Methods(http.MethodPut)
 	sr.HandleFunc("/users", srv.handleGetUser()).Methods(http.MethodGet)
 
 	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)
@@ -126,6 +126,8 @@ func NewServer() *Server {
 	}
 	if userCode == "" {
 		log.Printf("Set USER_CODE env variable to only allow user with this invite code to register an account")
+	} else {
+		log.Printf("Use UserCode: %s to register as a new user", userCode)
 	}
 	log.Printf("Please use mobile app to manage this server.")
 	return srv
