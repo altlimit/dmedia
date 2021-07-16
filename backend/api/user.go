@@ -27,11 +27,18 @@ func (s *Server) handleCreateUser() http.HandlerFunc {
 			user.Active = req.Active
 			user.IsAdmin = req.IsAdmin
 		} else if uCode == userCode {
+			user.IsAdmin = false
 			user.Active = true
 		} else {
 			return errAuth
 		}
-		return user.Save()
+		if err := user.Save(); err != nil {
+			if err.Error() == "UNIQUE constraint failed: user.name" {
+				return newValidationErr("username", "exists")
+			}
+			return err
+		}
+		return user.ID
 	})
 }
 

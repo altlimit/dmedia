@@ -25,9 +25,9 @@ var (
 			password TEXT NOT NULL,
 			admin INTEGER NOT NULL DEFAULT 0,
 			active INTEGER NOT NULL DEFAULT 1,
-			created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		)
-		CREATE INDEX idx_username on user(name);
+			created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE UNIQUE INDEX idx_username on user(name);
 		`,
 	}
 

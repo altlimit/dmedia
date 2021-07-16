@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5454
-@auth = Basic admin:123
+@auth = Basic user1:abc123
 
 ###
 
@@ -17,8 +17,10 @@ Authorization: {{auth}}
 Content-Type: application/json
 
 {
-    "username": "notadmin",
-    "password": "123"
+    "username": "admin",
+    "password": "123",
+    "admin": true,
+    "active": true
 }
 
 ###
@@ -51,7 +53,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jj
 Content-Disposition: form-data; name="file"; filename="test.jpg"
 Content-Type: image/jpeg
 
-< ./test2.jpg
+< ./test.jpg
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
 
 ###
@@ -75,7 +77,7 @@ Authorization: {{auth}}
 
 ###
 
-GET {{baseUrl}}/test12/2021-07/YF8eDKT4p.mp4?size=120
+GET {{baseUrl}}/1/2021-07-16/3/test3.mp4?size=300
 Authorization: {{auth}}
 
 ###

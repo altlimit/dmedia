@@ -265,29 +265,34 @@ func (s *Server) cursor(list interface{}, pages int) interface{} {
 
 func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, pass, ok := r.BasicAuth()
-		if !ok {
-			log.Println("basic auth not provided")
-			s.writeError(w, errAuth)
-			return
+		if r.URL.Path == "/api/users" && r.Method == http.MethodPost {
+			// endpoint auth handled in the handler
 		} else {
-			u, err := model.GetUser(0, user)
-			if err == model.ErrNotFound {
-				s.writeError(w, newValidationErr("username", "invalid"))
+			user, pass, ok := r.BasicAuth()
+			if !ok {
+				log.Println("basic auth not provided")
+				s.writeError(w, errAuth)
 				return
+			} else {
+				u, err := model.GetUser(0, user)
+				if err == model.ErrNotFound {
+					s.writeError(w, newValidationErr("username", "invalid"))
+					return
+				}
+				if err != nil {
+					s.writeError(w, err)
+					return
+				}
+				if !u.ValidPassword(pass) {
+					s.writeError(w, newValidationErr("password", "invalid"))
+					return
+				}
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, KeyUser, u.ID)
+				r = r.WithContext(ctx)
 			}
-			if err != nil {
-				s.writeError(w, err)
-				return
-			}
-			if !u.ValidPassword(pass) {
-				s.writeError(w, newValidationErr("password", "invalid"))
-				return
-			}
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, KeyUser, u.ID)
-			r = r.WithContext(ctx)
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }

@@ -343,12 +343,19 @@ func saveUser(user *User) error {
 	}
 	args := []interface{}{user.Name, user.Password, sBool[user.IsAdmin], sBool[user.Active]}
 	if user.ID == 0 {
-		_, err = db.Query(`
+		res, err := db.Exec(`
 		insert into user(name, password, admin, active) 
 		values(?, ?, ?, ?)`, args...)
+		if err != nil {
+			return err
+		}
+		id, err := res.LastInsertId()
+		if err == nil {
+			user.ID = id
+		}
 	} else {
 		args = append(args, user.ID)
-		_, err = db.Query(`
+		_, err = db.Exec(`
 		UPDATE user SET 
 		name = ?,
 		password = ?,
