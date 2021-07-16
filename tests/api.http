@@ -3,6 +3,10 @@
 
 ###
 
+GET {{baseUrl}}/status
+
+###
+
 GET {{baseUrl}}/api/auth
 Authorization: {{auth}}
 
@@ -13,7 +17,7 @@ Authorization: {{auth}}
 Content-Type: application/json
 
 {
-    "username": "admin",
+    "username": "notadmin",
     "password": "123"
 }
 

@@ -96,6 +96,8 @@ func NewServer() *Server {
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowCredentials(),
 	))
+
+	r.PathPrefix("/status").Subrouter().HandleFunc("", srv.handleStatus()).Methods(http.MethodGet)
 	sr := r.PathPrefix("/api").Subrouter()
 	sr.Use(srv.auth)
 
@@ -310,4 +312,10 @@ func newValidationErr(params ...string) validationError {
 		}
 	}
 	return validationError{Params: p}
+}
+
+func (s *Server) handleStatus() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		return "OK"
+	})
 }

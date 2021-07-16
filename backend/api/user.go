@@ -52,7 +52,10 @@ func (s *Server) handleGetUser() http.HandlerFunc {
 }
 
 func (s *Server) handleAuth() http.HandlerFunc {
+	type response struct {
+		IsAdmin bool `json:"admin"`
+	}
 	return s.handler(func(r *http.Request) interface{} {
-		return "OK"
+		return &response{IsAdmin: s.currentUser(r.Context()).IsAdmin}
 	})
 }
