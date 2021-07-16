@@ -51,12 +51,13 @@ class Client {
       "Authorization":
           base64Encode(utf8.encode('${account.username}:${account.password}'))
     };
-    account.serverUrl.split("|").forEach((url) async {
+    var urls = account.serverUrl.split("|");
+    for (var i = 0; i < urls.length; i++) {
       if (selectedUrl.length == 0) {
-        var response = await http.get(Uri.parse(account.serverUrl + '/status'));
-        if (await response.statusCode == 200) selectedUrl = account.serverUrl;
+        var response = await http.get(Uri.parse(urls[i] + '/status'));
+        if (response.statusCode == 200) selectedUrl = urls[i];
       }
-    });
+    }
     return selectedUrl;
   }
 
