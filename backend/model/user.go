@@ -9,15 +9,14 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/altlimit/dmedia/util"
 	"github.com/rwcarlsen/goexif/exif"
 	"github.com/rwcarlsen/goexif/tiff"
-	"github.com/teris-io/shortid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,24 +25,27 @@ const (
 		id, name, public, checksum, ctype, path, 
 		strftime('%Y-%m-%d', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified, 
 		size, meta`
+	userFields = `
+		id, name, password, admin, active
+	`
 )
 
 var (
-	uid             *shortid.Shortid
 	dateFormat      = "2006-01-02"
 	dateTimeFormat  = "2006-01-02 15:04:05"
 	sDateTimeFormat = "2006-01-02T15:04:05.000Z"
+	sBool           = map[bool]int{true: 1, false: 0}
 )
 
-func init() {
-	sid, err := shortid.New(1, shortid.DefaultABC, 2342)
-	if err != nil {
-		panic(err)
-	}
-	uid = sid
-}
-
 type (
+	User struct {
+		ID       int64  `json:"id"`
+		Name     string `json:"username" validate:"required,username"`
+		Password string `json:"password,omitempty"`
+		IsAdmin  bool   `json:"admin"`
+		Active   bool   `json:"active"`
+	}
+
 	Media struct {
 		ID          int64     `json:"id"`
 		Name        string    `json:"name"`
@@ -133,22 +135,22 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	} else {
 		return 0, ErrNotSupported
 	}
-	db, err := getDB(u.Name)
+	db, err := getDB(u.ID)
 	if err != nil {
 		return 0, err
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
-	ext := filepath.Ext(name)
-	p, err := uid.Generate()
-	if err != nil {
-		return 0, err
+	r := db.QueryRow(`select seq from sqlite_sequence WHERE name = 'media'`)
+	seq := 1
+	if err := r.Scan(&seq); err == nil {
+		seq++
 	}
-	dp := dataPath(u.Name)
-	pDir := filepath.Join(dp, created[0:7])
+	dp := dataPath(u.ID)
+	pDir := filepath.Join(dp, created, strconv.Itoa(seq))
 	os.MkdirAll(pDir, os.ModeDir)
-	pFile := filepath.Join(pDir, p+ext)
+	pFile := filepath.Join(pDir, name)
 	if err := ioutil.WriteFile(pFile, content, 0644); err != nil {
 		return 0, err
 	}
@@ -166,12 +168,12 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	}
 	chk := fmt.Sprintf("%x", sha1.Sum(content))
 	res, err := db.Exec(`
-		insert into media(name, ctype, path, checksum, created, size, meta, modified) 
-		values(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-		name, cType, path.Join(created[0:7], p+ext), chk, created, len(content), exd)
+		insert into media(name, ctype, checksum, created, size, meta, modified) 
+		values(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		name, cType, chk, created, len(content), exd)
 	if err != nil {
 		if err.Error() == "UNIQUE constraint failed: media.checksum" {
-			r := db.QueryRow(`SELECT id FROM media WHERE checksum = ?`, chk)
+			r = db.QueryRow(`SELECT id FROM media WHERE checksum = ?`, chk)
 			var id int64
 			if err := r.Scan(&id); err != nil {
 				return 0, err
@@ -184,7 +186,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 }
 
 func (u *User) GetAllMedia(page int, limit int) ([]*Media, int, error) {
-	db, err := getDB(u.Name)
+	db, err := getDB(u.ID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -216,7 +218,7 @@ func (u *User) GetAllMedia(page int, limit int) ([]*Media, int, error) {
 }
 
 func (u *User) GetMediaByID(id int) (*Media, error) {
-	db, err := getDB(u.Name)
+	db, err := getDB(u.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -268,4 +270,92 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 		}
 	}
 	return m, nil
+}
+
+func getRowUser(row *sql.Rows) (*User, error) {
+	u := &User{}
+	var (
+		admin  int
+		active int
+	)
+	if err := row.Scan(&u.ID, &u.Name, &u.Password, &admin, &active); err != nil {
+		return nil, err
+	}
+	u.IsAdmin = admin == 1
+	u.Active = active == 1
+	return u, nil
+}
+
+func GetUsers() ([]*User, error) {
+	db, err := getDB(0)
+	if err != nil {
+		return nil, err
+	}
+	row, err := db.Query(fmt.Sprintf(`SELECT %s
+	FROM user`, userFields))
+	defer row.Close()
+	var result []*User
+	for row.Next() {
+		u, err := getRowUser(row)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, u)
+	}
+	return result, nil
+}
+
+func GetUser(userID int64, name string) (*User, error) {
+	db, err := getDB(0)
+	if err != nil {
+		return nil, err
+	}
+	field := "id"
+	var val interface{}
+	if name != "" && userID == 0 {
+		field = "name"
+		val = name
+	} else {
+		val = userID
+	}
+	row, err := db.Query(fmt.Sprintf(`SELECT %s
+	FROM user
+	WHERE %s = ?
+	LIMIT 1`, userFields, field), val)
+	defer row.Close()
+	if err != nil {
+		return nil, err
+	}
+	for row.Next() {
+		u, err := getRowUser(row)
+		if err != nil {
+			return nil, err
+		}
+		return u, nil
+	}
+	return nil, ErrNotFound
+}
+
+func saveUser(user *User) error {
+	db, err := getDB(0)
+	if err != nil {
+		return err
+	}
+	args := []interface{}{user.Name, user.Password, sBool[user.IsAdmin], sBool[user.Active]}
+	if user.ID == 0 {
+		_, err = db.Query(`
+		insert into user(name, password, admin, active) 
+		values(?, ?, ?, ?)`, args...)
+	} else {
+		args = append(args, user.ID)
+		_, err = db.Query(`
+		UPDATE user SET 
+		name = ?,
+		password = ?,
+		admin = ?,
+		active = ?
+		WHERE id = ?
+		`, args...)
+	}
+	return err
 }

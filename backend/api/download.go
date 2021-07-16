@@ -36,7 +36,7 @@ func (s *Server) handleDownload() http.HandlerFunc {
 	fs := http.FileServer(http.Dir(util.DataPath))
 	return func(wr http.ResponseWriter, r *http.Request) {
 		v := mux.Vars(r)
-		if v["user"] != s.user(r.Context()) {
+		if v["user"] != util.I64toa(s.userID(r.Context())) {
 			s.writeError(wr, errAuth)
 			return
 		}
@@ -66,7 +66,6 @@ func (s *Server) handleDownload() http.HandlerFunc {
 			}
 			return
 		}
-		log.Printf("Path: %s - %s/%s/%s", r.URL.Path, v["user"], v["date"], v["file"])
 		fs.ServeHTTP(wr, r)
 	}
 }

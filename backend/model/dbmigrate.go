@@ -1,23 +1,14 @@
 package model
 
 var (
-	dbMigrations []string
-
-	dbMigrateTable = `
-		CREATE TABLE migrations (version INTEGER NOT NULL);
-		INSERT INTO migrations (version) VALUES (0);
-	`
-)
-
-func init() {
-	dbMigrations = append(dbMigrations, `
+	mediaMigrations = []string{
+		`
 		CREATE TABLE media (
 			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, 
 			name TEXT NOT NULL,
 			public INTEGER NOT NULL DEFAULT 0,
 			checksum TEXT NOT NULL,
 			ctype TEXT NOT NULL,
-			path TEXT NOT NULL,
 			created DATE NOT NULL,
 			modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			size INTEGER NOT NULL DEFAULT 0,
@@ -25,6 +16,23 @@ func init() {
 		);
 		CREATE INDEX idx_modified on media(modified);
 		CREATE UNIQUE INDEX idx_checksum on media(checksum);
-		CREATE UNIQUE INDEX idx_path on media(path);
-	`)
-}
+	`,
+	}
+	dbMigrations = []string{
+		`CREATE TABLE user (
+			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			password TEXT NOT NULL,
+			admin INTEGER NOT NULL DEFAULT 0,
+			active INTEGER NOT NULL DEFAULT 1,
+			created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		)
+		CREATE INDEX idx_username on user(name);
+		`,
+	}
+
+	dbMigrateTable = `
+		CREATE TABLE migrations (version INTEGER NOT NULL);
+		INSERT INTO migrations (version) VALUES (0);
+	`
+)

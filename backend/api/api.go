@@ -8,12 +8,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/altlimit/dmedia/model"
+	"github.com/altlimit/dmedia/util"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -49,6 +51,9 @@ type (
 var (
 	errAuth     = fmt.Errorf("not logged in")
 	errNotFound = fmt.Errorf("not found")
+
+	adminCode = os.Getenv("ADMIN_CODE")
+	userCode  = os.Getenv("USER_CODE")
 )
 
 // Error validation error
@@ -102,7 +107,8 @@ func NewServer() *Server {
 	sr.Use(srv.auth)
 
 	sr.HandleFunc("/auth", srv.handleAuth()).Methods(http.MethodGet)
-	sr.HandleFunc("/users", srv.handleSaveUser()).Methods(http.MethodPost)
+	sr.HandleFunc("/users", srv.handleCreateUser()).Methods(http.MethodPost)
+	sr.HandleFunc("/users", srv.handleSaveUser()).Methods(http.MethodPut)
 	sr.HandleFunc("/users", srv.handleGetUser()).Methods(http.MethodGet)
 
 	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)
@@ -110,10 +116,18 @@ func NewServer() *Server {
 
 	sr.HandleFunc("/upload", srv.handleUpload()).Methods(http.MethodPost)
 
-	dlr := r.PathPrefix("/{user}/{date}/{file}").Subrouter()
+	dlr := r.PathPrefix("/{user}/{date}/{id}/{file}").Subrouter()
 	dlr.Use(srv.auth)
 	dlr.HandleFunc("", srv.handleDownload()).Methods(http.MethodGet)
 
+	if adminCode == "" {
+		adminCode = util.NewID()
+		log.Printf("Use AdminCode: %s to register as a new admin", adminCode)
+	}
+	if userCode == "" {
+		log.Printf("Set USER_CODE env variable to only allow user with this invite code to register an account")
+	}
+	log.Printf("Please use mobile app to manage this server.")
 	return srv
 }
 
@@ -257,7 +271,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			s.writeError(w, errAuth)
 			return
 		} else {
-			u, err := model.GetUser(user)
+			u, err := model.GetUser(0, user)
 			if err == model.ErrNotFound {
 				s.writeError(w, newValidationErr("username", "invalid"))
 				return
@@ -271,24 +285,24 @@ func (s *Server) auth(next http.Handler) http.Handler {
 				return
 			}
 			ctx := r.Context()
-			ctx = context.WithValue(ctx, KeyUser, u.Name)
+			ctx = context.WithValue(ctx, KeyUser, u.ID)
 			r = r.WithContext(ctx)
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-func (s *Server) user(ctx context.Context) string {
-	if user, ok := ctx.Value(KeyUser).(string); ok {
-		return user
+func (s *Server) userID(ctx context.Context) int64 {
+	if userID, ok := ctx.Value(KeyUser).(int64); ok {
+		return userID
 	}
-	return ""
+	return 0
 }
 
 func (s *Server) currentUser(ctx context.Context) *model.User {
-	user := s.user(ctx)
-	if user != "" {
-		u, err := model.GetUser(user)
+	userID := s.userID(ctx)
+	if userID > 0 {
+		u, err := model.GetUser(userID, "")
 		if err == nil {
 			return u
 		}

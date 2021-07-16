@@ -6,10 +6,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+
+	"github.com/teris-io/shortid"
 )
 
 var (
 	DataPath string
+	uid      *shortid.Shortid
 )
 
 func init() {
@@ -17,6 +21,16 @@ func init() {
 	if DataPath == "" {
 		DataPath = filepath.Join("..", "data")
 	}
+
+	sid, err := shortid.New(1, shortid.DefaultABC, 2342)
+	if err != nil {
+		panic(err)
+	}
+	uid = sid
+}
+
+func NewID() string {
+	return uid.MustGenerate()
 }
 
 func FileExists(path string) bool {
@@ -52,4 +66,15 @@ func VideoInfo(input string) map[string]interface{} {
 		return info
 	}
 	return nil
+}
+
+// I64toa converts string to int64
+func Atoi64(n string) int64 {
+	num, _ := strconv.ParseInt(n, 10, 64)
+	return num
+}
+
+// I64toa converts int64 to string
+func I64toa(n int64) string {
+	return strconv.FormatInt(n, 10)
 }

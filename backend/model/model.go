@@ -2,13 +2,10 @@ package model
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,10 +14,8 @@ import (
 )
 
 var (
-	openedDBs map[string]*DB
+	openedDBs map[int64]*DB
 	dbLock    sync.Mutex
-	mdbLock   sync.Mutex
-	mData     *mainData
 
 	ErrNotFound     = fmt.Errorf("not found")
 	ErrNotSupported = fmt.Errorf("not supported")
@@ -31,53 +26,47 @@ type (
 		db         *sql.DB
 		lastAccess time.Time
 	}
-
-	User struct {
-		Name     string `json:"username"`
-		Password string `json:"password"`
-		IsAdmin  bool   `json:"admin"`
-	}
-
-	mainData struct {
-		Users []*User `json:"users"`
-	}
 )
 
-func dataPath(user string) string {
+func dataPath(userID int64) string {
 	dp := util.DataPath
-	if user != "" {
-		dp = filepath.Join(dp, user)
-	}
+	u := util.I64toa(userID)
+	dp = filepath.Join(dp, u)
 	os.MkdirAll(dp, os.ModeDir)
 	return dp
 }
 
-func getDB(user string) (*sql.DB, error) {
+func getDB(userID int64) (*sql.DB, error) {
 	dbLock.Lock()
 	defer dbLock.Unlock()
-	odb, ok := openedDBs[user]
+	odb, ok := openedDBs[userID]
 	if ok {
 		odb.lastAccess = time.Now().UTC()
 		return odb.db, nil
 	}
-
-	log.Printf("Opening %s DB", user)
-	p := filepath.Join(dataPath(user), "media.db")
+	var p string
+	if userID > 0 {
+		log.Printf("Opening %d.db", userID)
+		p = filepath.Join(dataPath(userID), "media.db")
+	} else {
+		log.Printf("Opening main.db")
+		p = filepath.Join(util.DataPath, "main.db")
+	}
 	db, err := sql.Open("sqlite3", p)
 	db.SetMaxOpenConns(1)
 	if err != nil {
 		return nil, err
 	}
 	if openedDBs == nil {
-		openedDBs = make(map[string]*DB)
+		openedDBs = make(map[int64]*DB)
 	}
-	openedDBs[user] = &DB{db: db, lastAccess: time.Now().UTC()}
+	openedDBs[userID] = &DB{db: db, lastAccess: time.Now().UTC()}
 	go func() {
 		for {
 			time.Sleep(time.Minute * 1)
 			idle := false
 			dbLock.Lock()
-			db, ok := openedDBs[user]
+			db, ok := openedDBs[userID]
 			if !ok || time.Now().UTC().Sub(db.lastAccess).Minutes() > 1 {
 				idle = true
 			}
@@ -86,15 +75,21 @@ func getDB(user string) (*sql.DB, error) {
 				break
 			}
 		}
-		log.Printf("Closing %s DB", user)
+		log.Printf("Closing %d.db", userID)
 		db.Close()
 		dbLock.Lock()
 		defer dbLock.Unlock()
-		delete(openedDBs, user)
+		delete(openedDBs, userID)
 	}()
 
 	// check migrations
-	tdb := len(dbMigrations)
+	var migrations []string
+	if userID == 0 {
+		migrations = dbMigrations
+	} else {
+		migrations = mediaMigrations
+	}
+	tdb := len(migrations)
 	r := db.QueryRow(`SELECT version FROM migrations`)
 	var version int
 	if err := r.Scan(&version); err != nil {
@@ -109,7 +104,7 @@ func getDB(user string) (*sql.DB, error) {
 	}
 	if tdb > version {
 		for i := version; i < tdb; i++ {
-			_, err = db.Exec(dbMigrations[i])
+			_, err = db.Exec(migrations[i])
 			if err != nil {
 				return nil, err
 			}
@@ -120,81 +115,4 @@ func getDB(user string) (*sql.DB, error) {
 		log.Printf("Migrated db to %d", tdb)
 	}
 	return db, nil
-}
-
-func GetUsers() ([]*User, error) {
-	if err := loadMainData(); err != nil {
-		return nil, err
-	}
-	return mData.Users, nil
-}
-
-func GetUser(username string) (*User, error) {
-	if err := loadMainData(); err != nil {
-		return nil, err
-	}
-	for _, v := range mData.Users {
-		if strings.ToLower(username) == strings.ToLower(v.Name) {
-			return v, nil
-		}
-	}
-	return nil, ErrNotFound
-}
-
-func saveUser(user *User) error {
-	mdbLock.Lock()
-	defer mdbLock.Unlock()
-	if err := loadMainData(); err != nil {
-		return err
-	}
-
-	found := false
-	for k, v := range mData.Users {
-		if strings.ToLower(v.Name) == strings.ToLower(user.Name) {
-			found = true
-			mData.Users[k] = user
-			break
-		}
-	}
-	if !found {
-		mData.Users = append(mData.Users, user)
-	}
-	dat, err := json.Marshal(mData)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(dataPath(""), "main.json"), dat, 0644)
-}
-
-func loadMainData() error {
-	if mData == nil {
-		mdbLock.Lock()
-		defer mdbLock.Unlock()
-		mData = &mainData{Users: make([]*User, 0)}
-		dp := dataPath("")
-		mdp := filepath.Join(dp, "main.json")
-		if !util.FileExists(mdp) {
-			admin := &User{IsAdmin: true, Name: "admin"}
-			pw, err := uid.Generate()
-			if err != nil {
-				return err
-			}
-			admin.SetPassword(pw)
-			mData.Users = append(mData.Users, admin)
-			dat, err := json.Marshal(mData)
-			if err != nil {
-				return err
-			}
-			if err := ioutil.WriteFile(mdp, dat, 0644); err != nil {
-				return err
-			}
-			log.Printf("Created User: %s / %s", admin.Name, pw)
-		}
-		dat, err := ioutil.ReadFile(mdp)
-		if err != nil {
-			return err
-		}
-		return json.Unmarshal(dat, mData)
-	}
-	return nil
 }

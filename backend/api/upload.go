@@ -58,7 +58,7 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		if fName == "" {
 			return newValidationErr("name", "required")
 		}
-		u, err := model.GetUser(s.user(r.Context()))
+		u, err := model.GetUser(s.userID(r.Context()), "")
 		if err != nil {
 			return err
 		}
