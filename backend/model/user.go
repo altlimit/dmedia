@@ -10,7 +10,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -142,18 +141,21 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := db.QueryRow(`select seq from sqlite_sequence WHERE name = 'media'`)
-	seq := 1
-	if err := r.Scan(&seq); err == nil {
-		seq++
-	}
 	dp := dataPath(u.ID)
-	pDir := filepath.Join(dp, created, strconv.Itoa(seq))
-	os.MkdirAll(pDir, os.ModeDir)
-	pFile := filepath.Join(pDir, name)
+	tmpDir := filepath.Join(dp, "tmp", util.NewID())
+	if err := os.MkdirAll(tmpDir, os.ModeDir); err != nil {
+		return 0, err
+	}
+	pFile := filepath.Join(tmpDir, name)
 	if err := ioutil.WriteFile(pFile, content, 0644); err != nil {
 		return 0, err
 	}
+	cleanUp := func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			log.Printf("Failed to delete tmpDir: %s - %v", tmpDir, err)
+		}
+	}
+	defer cleanUp()
 	if isVideo {
 		if info := util.VideoInfo(pFile); info != nil {
 			meta = &Meta{Info: info}
@@ -172,8 +174,11 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 		values(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		name, cType, chk, created, len(content), exd)
 	if err != nil {
+		if err := os.Remove(pFile); err != nil {
+			return 0, err
+		}
 		if err.Error() == "UNIQUE constraint failed: media.checksum" {
-			r = db.QueryRow(`SELECT id FROM media WHERE checksum = ?`, chk)
+			r := db.QueryRow(`SELECT id FROM media WHERE checksum = ?`, chk)
 			var id int64
 			if err := r.Scan(&id); err != nil {
 				return 0, err
@@ -182,7 +187,22 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 		}
 		return 0, err
 	}
-	return res.LastInsertId()
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	pDir := filepath.Join(dp, created, util.I64toa(id))
+	if err := os.MkdirAll(pDir, os.ModeDir); err != nil {
+		return 0, err
+	}
+	if err := os.Rename(pFile, filepath.Join(pDir, name)); err != nil {
+		_, err = db.Exec(`DELETE FROM media WHERE id = ?`, id)
+		if err != nil {
+			return 0, err
+		}
+		return 0, err
+	}
+	return id, nil
 }
 
 func (u *User) GetAllMedia(page int, limit int) ([]*Media, int, error) {

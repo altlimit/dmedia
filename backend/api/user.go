@@ -19,14 +19,13 @@ func (s *Server) handleCreateUser() http.HandlerFunc {
 		}
 		ctx := r.Context()
 		u := s.currentUser(ctx)
-		aCode := s.QueryParam(r, "acode")
-		uCode := s.QueryParam(r, "ucode")
+		code := s.QueryParam(r, "code")
 		user := &model.User{Name: req.Name}
 		user.SetPassword(req.Password)
-		if u.IsAdmin || aCode == adminCode {
+		if u.IsAdmin || code == adminCode {
 			user.Active = req.Active
 			user.IsAdmin = req.IsAdmin
-		} else if uCode == userCode {
+		} else if code == userCode {
 			user.IsAdmin = false
 			user.Active = true
 		} else {

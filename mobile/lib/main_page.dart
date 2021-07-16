@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:dmedia/model.dart';
 import 'package:dmedia/login_page.dart';
-import 'package:dmedia/preference.dart';
 import 'package:dmedia/store.dart';
 
-class GalleryPage extends StatefulWidget {
+class MainPage extends StatefulWidget {
   @override
-  _GalleryPage createState() => _GalleryPage();
+  _MainPage createState() => _MainPage();
 }
 
-class _GalleryPage extends State<GalleryPage> with Store {
+class _MainPage extends State<MainPage> with Store {
   @override
   void initState() {
     super.initState();

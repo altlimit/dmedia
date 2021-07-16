@@ -4,7 +4,7 @@ import 'package:dmedia/model.dart';
 import 'package:dmedia/preference.dart';
 import 'package:dmedia/settings_page.dart';
 import 'package:dmedia/login_page.dart';
-import 'package:dmedia/gallery_page.dart';
+import 'package:dmedia/main_page.dart';
 
 class MyApp extends StatefulWidget {
   MyApp({Key? key}) : super(key: key);
@@ -49,7 +49,7 @@ class MyAppState extends State<MyApp> with Store {
             brightness: _isDarkMode ? Brightness.dark : Brightness.light),
         initialRoute: _selectedAccount == -1 ? '/login' : '/',
         routes: {
-          '/': (context) => GalleryPage(),
+          '/': (context) => MainPage(),
           '/login': (context) => LoginPage(),
           '/settings': (context) => SettingsPage(),
         });
