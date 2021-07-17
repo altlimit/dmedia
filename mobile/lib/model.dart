@@ -10,6 +10,7 @@ const bool isRelease = bool.fromEnvironment("dart.vm.product");
 const String settingsDarkMode = 'dark_mode';
 const String settingsAccounts = 'accounts';
 const String settingsAccount = 'account';
+const String taskSync = 'sync';
 
 class Account {
   int id = 0;

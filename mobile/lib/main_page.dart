@@ -3,6 +3,7 @@ import 'package:dmedia/model.dart';
 import 'package:dmedia/account_page.dart';
 import 'package:dmedia/store.dart';
 import 'package:dmedia/preference.dart';
+import 'package:dmedia/background.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -78,6 +79,10 @@ class _MainPage extends State<MainPage> with Store {
   @override
   void initState() {
     super.initState();
+
+    Bg.on(taskSync, 'syncing', (m) {
+      print('Sync: $m');
+    });
   }
 
   void onTabTapped(int index) {
@@ -95,8 +100,12 @@ class _MainPage extends State<MainPage> with Store {
               actions: [
                 IconButton(
                   icon: Icon(Icons.account_circle),
-                  onPressed: () {
+                  onPressed: () async {
                     // Preference.clear();
+                    await Bg.manager()
+                      ..registerOneOffTask('1000', taskSync,
+                          inputData: {'test': 1235},
+                          initialDelay: Duration(seconds: 2));
                     var accounts = Util.getAccounts();
                     if (accounts.length == 0) {
                       Navigator.pushNamed(context, '/account');
