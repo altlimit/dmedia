@@ -14,7 +14,7 @@ class MyApp extends StatefulWidget {
 
 class MyAppState extends State<MyApp> with Store {
   late bool _isDarkMode;
-  late String _selectedAccount;
+  late Account? _selectedAccount;
 
   @override
   void initState() {
@@ -31,11 +31,11 @@ class MyAppState extends State<MyApp> with Store {
 
   updateAccount() {
     setState(() {
-      _selectedAccount = Preference.getString(settingsAccount, def: "")!;
+      _selectedAccount = Util.getActiveAccount();
     });
   }
 
-  String currentAccount() {
+  Account? currentAccount() {
     return _selectedAccount;
   }
 

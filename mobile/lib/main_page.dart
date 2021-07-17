@@ -4,6 +4,7 @@ import 'package:dmedia/account_page.dart';
 import 'package:dmedia/store.dart';
 import 'package:dmedia/preference.dart';
 import 'package:dmedia/background.dart';
+import 'dart:convert';
 
 class MainPage extends StatefulWidget {
   @override
@@ -102,29 +103,33 @@ class _MainPage extends State<MainPage> with Store {
                   icon: Icon(Icons.account_circle),
                   onPressed: () async {
                     // Preference.clear();
-                    await Bg.manager()
-                      ..registerOneOffTask('1000', taskSync,
-                          inputData: {'test': 1235},
-                          initialDelay: Duration(seconds: 2));
+                    // await Bg.manager()
+                    //   ..registerOneOffTask('1000', taskSync,
+                    //       inputData: {'test': 1235},
+                    //       initialDelay: Duration(seconds: 2));
                     var accounts = Util.getAccounts();
                     if (accounts.length == 0) {
                       Navigator.pushNamed(context, '/account');
                       return;
                     }
-                    var accountOptions =
-                        accounts.map((a) => a.toString()).toList();
+                    List<int> accountIds = [];
+                    List<String> accountOptions = [];
+                    for (var key in accounts.keys) {
+                      accountIds.add(key);
+                      accountOptions.add(accounts[key].toString());
+                    }
                     accountOptions.add("Add New");
-                    String? account;
+                    int? selectedId;
                     Util.dialogList(context, "Select Account", accountOptions,
-                        (selected) {
+                        (index, selected) {
                       if (selected != "Add New") {
-                        account = selected;
+                        selectedId = accountIds[index];
                       }
                       Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) =>
-                                  AccountPage(account: account)));
+                                  AccountPage(internalId: selectedId)));
                     });
                   },
                 ),

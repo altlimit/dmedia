@@ -5,9 +5,9 @@ import 'package:dmedia/store.dart';
 import 'dart:convert';
 
 class AccountPage extends StatefulWidget {
-  final String? account;
+  final int? internalId;
 
-  AccountPage({this.account});
+  AccountPage({this.internalId});
 
   @override
   _AccountPageState createState() => _AccountPageState();
@@ -16,23 +16,23 @@ class AccountPage extends StatefulWidget {
 class _AccountPageState extends State<AccountPage> with Store {
   Account _account = Account();
   bool _isAdd = false;
-  String _currentAccount = "";
+  Account? _currentAccount;
   bool _isActive = false;
   String _code = "";
   Map<String, String> _errors = {};
   bool _isCreate = false;
-  Account? _originalAccount;
+  int? _internalId;
 
   @override
   void initState() {
     super.initState();
-    if (widget.account != null) {
-      var a = Util.getAccount(widget.account!);
+    _internalId = widget.internalId;
+    if (_internalId != null) {
+      var a = Util.getAccount(_internalId!);
       if (a != null) {
         _account = a;
-        _currentAccount = _account.toString();
-        _isActive = _currentAccount == myAppState!.currentAccount();
-        _originalAccount = Account.fromJson(_account.toJson());
+        _isActive = Util.getActiveAccountId() == _internalId;
+        _currentAccount = Account.fromJson(_account.toJson());
       }
     } else {
       _isAdd = true;
@@ -134,7 +134,6 @@ class _AccountPageState extends State<AccountPage> with Store {
           ),
         ),
       );
-
     children.add(ElevatedButton(
       onPressed: isValidAccount()
           ? () async {
@@ -155,7 +154,7 @@ class _AccountPageState extends State<AccountPage> with Store {
                 result = await client.request('/api/auth');
               else // is update
               {
-                client = Client(_originalAccount!);
+                client = Client(_currentAccount!);
                 result =
                     await client.request('/api/users/' + _account.id.toString(),
                         data: {
@@ -181,10 +180,10 @@ class _AccountPageState extends State<AccountPage> with Store {
               }
               _account.admin = result['admin'] as bool;
               _account.id = result['id'];
-              Util.saveAccount(_account, acct: _currentAccount);
-              if (_isAdd ||
-                  _isActive && _account.toString() != _currentAccount) {
-                Preference.setString(settingsAccount, _account.toString());
+              var newActiveId =
+                  Util.saveAccount(_account, internalId: _internalId);
+              if (_isAdd) {
+                Util.setActiveAccountId(newActiveId);
                 myAppState!.updateAccount();
               }
               Navigator.of(context).pop();
@@ -206,7 +205,7 @@ class _AccountPageState extends State<AccountPage> with Store {
           child: TextButton(
               style: TextButton.styleFrom(primary: Colors.blue),
               onPressed: () {
-                Preference.setString(settingsAccount, _account.toString());
+                Util.setActiveAccountId(_internalId!);
                 myAppState!.updateAccount();
                 Navigator.of(context).pop();
               },
@@ -219,8 +218,7 @@ class _AccountPageState extends State<AccountPage> with Store {
               style: TextButton.styleFrom(primary: Colors.red),
               onPressed: () {
                 Util.confirmDialog(context, () {
-                  Util.saveAccount(_account,
-                      delete: true, acct: _currentAccount);
+                  Util.delAccount(_internalId!);
                   Navigator.of(context).pop();
                 });
               },
@@ -230,7 +228,6 @@ class _AccountPageState extends State<AccountPage> with Store {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text("Account Setup"),
       ),

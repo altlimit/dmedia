@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preference {
@@ -14,6 +15,10 @@ class Preference {
   static void clear() {
     _prefs!.clear();
     _memoryPrefs.clear();
+  }
+
+  static void setJson(String key, dynamic value) {
+    setString(key, json.encode(value));
   }
 
   static void setString(String key, String value) {
@@ -34,6 +39,10 @@ class Preference {
   static void setBool(String key, bool value) {
     _prefs!.setBool(key, value);
     _memoryPrefs[key] = value;
+  }
+
+  static dynamic getJson(String key, {dynamic def}) {
+    return json.decode(getString(key, def: json.encode(def))!);
   }
 
   static String? getString(String key, {String? def}) {

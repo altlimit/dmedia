@@ -22,7 +22,19 @@ class _SettingsPage extends State<SettingsPage> with Store {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> settingsWidgets = List<Widget>.empty();
+    List<Widget> settingsWidgets = [
+      SwitchListTile(
+          title: const Text('Dark Mode'),
+          subtitle: const Text('Set theme brightness to dark.'),
+          value: _isDarkMode,
+          onChanged: (bool value) {
+            setState(() {
+              _isDarkMode = value;
+            });
+            Preference.setBool(settingsDarkMode, value);
+            myAppState!.updateTheme();
+          })
+    ];
 
     return Scaffold(
       appBar: AppBar(

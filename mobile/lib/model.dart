@@ -10,6 +10,7 @@ const bool isRelease = bool.fromEnvironment("dart.vm.product");
 const String settingsDarkMode = 'dark_mode';
 const String settingsAccounts = 'accounts';
 const String settingsAccount = 'account';
+const String settingsIdCounter = 'id_ctr';
 const String taskSync = 'sync';
 
 class Account {
@@ -38,7 +39,7 @@ class Account {
         'username': username,
         'password': password,
         'admin': admin,
-        'id': id,
+        'id': id
       };
 
   @override
@@ -115,46 +116,55 @@ class Client {
 }
 
 class Util {
-  static Map<String, Client> Clients = <String, Client>{};
+  static Map<int, Client> Clients = {};
 
-  static Client getClient(String account) {
-    if (!Clients.containsKey(account)) {
-      Clients[account] = Client(getAccount(account)!);
+  static Client getClient(int internalId) {
+    if (!Clients.containsKey(internalId)) {
+      Clients[internalId] = Client(getAccount(internalId)!);
     }
-    return Clients[account]!;
+    return Clients[internalId]!;
   }
 
-  static List<Account> getAccounts() {
-    List<dynamic> accounts =
-        jsonDecode(Preference.getString(settingsAccounts, def: '[]')!);
-
-    return List<Account>.from(accounts.map((a) => Account.fromJson(a)));
+  static Map<int, Account> getAccounts() {
+    Map<String, dynamic> accounts =
+        Preference.getJson(settingsAccounts, def: {});
+    return accounts
+        .map((key, value) => MapEntry(int.parse(key), Account.fromJson(value)));
   }
 
-  static Account? getAccount(String account) {
-    var accounts = getAccounts().where((a) => a.toString() == account).toList();
-    return accounts.length == 0 ? null : accounts[0];
-  }
-
-  static int saveAccount(Account account,
-      {bool delete = false, String acct = ""}) {
+  static Account? getAccount(int internalId) {
     var accounts = getAccounts();
-    var index = -1;
-    for (var i = 0; i < accounts.length; i++) {
-      if (accounts[i].toString() == acct) {
-        index = i;
-        break;
-      }
+    return accounts[internalId];
+  }
+
+  static Account? getActiveAccount() {
+    return getAccount(getActiveAccountId());
+  }
+
+  static int getActiveAccountId() {
+    return Preference.getInt(settingsAccount, def: 0)!;
+  }
+
+  static void setActiveAccountId(int internalId) {
+    Preference.setInt(settingsAccount, internalId);
+  }
+
+  static void delAccount(int internalId) {
+    var accounts = getAccounts();
+    if (accounts.containsKey(internalId)) accounts.remove(internalId);
+  }
+
+  static int saveAccount(Account account, {int? internalId}) {
+    var accounts = getAccounts();
+
+    if (internalId == null) {
+      internalId = Preference.getInt(settingsIdCounter, def: 1)!;
+      Preference.setInt(settingsIdCounter, internalId + 1);
     }
-    if (delete) {
-      if (index != -1) accounts.removeAt(index);
-    } else if (index != -1) {
-      accounts[index] = account;
-    } else {
-      accounts.add(account);
-    }
-    Preference.setString(settingsAccounts, jsonEncode(accounts));
-    return accounts.length - 1;
+    accounts[internalId] = account;
+    Preference.setJson(
+        settingsAccounts, accounts.map((k, v) => MapEntry(k.toString(), v)));
+    return internalId;
   }
 
   static void confirmDialog(BuildContext context, Function() onConfirm) {
@@ -183,20 +193,16 @@ class Util {
   }
 
   static void dialogList(BuildContext context, String title,
-      List<String> options, Function(String) onSelect) {
-    // set up the SimpleDialog
-    SimpleDialog dialog = SimpleDialog(
-      title: Text(title),
-      children: options
-          .map((o) => SimpleDialogOption(
-                child: Text(o),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onSelect(o);
-                },
-              ))
-          .toList(),
-    );
+      List<String> options, Function(int, String) onSelect) {
+    List<Widget> dOptions = [];
+    for (var i = 0; i < options.length; i++)
+      dOptions.add(SimpleDialogOption(
+          child: Text(options[i]),
+          onPressed: () {
+            Navigator.of(context).pop();
+            onSelect(i, options[i]);
+          }));
+    SimpleDialog dialog = SimpleDialog(title: Text(title), children: dOptions);
 
     // show the dialog
     showDialog(
