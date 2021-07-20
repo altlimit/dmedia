@@ -286,6 +286,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 					return
 				}
 				if !u.ValidPassword(pass) {
+					// TODO add exponential backoff
 					s.writeError(w, newValidationErr("password", "invalid"))
 					return
 				}

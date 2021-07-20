@@ -103,7 +103,6 @@ class _MainPage extends State<MainPage> with Store {
                 IconButton(
                   icon: Icon(Icons.account_circle),
                   onPressed: () async {
-                    print('Date: ' + Util.dateTimeToString(DateTime.now()));
                     // Preference.clear();
                     // await Bg.manager()
                     //   ..registerOneOffTask('1000', taskSync,

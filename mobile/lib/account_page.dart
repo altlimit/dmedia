@@ -22,10 +22,12 @@ class _AccountPageState extends State<AccountPage> with Store {
   Map<String, String> _errors = {};
   bool _isCreate = false;
   int? _internalId;
+  late bool _isFirstAccount = false;
 
   @override
   void initState() {
     super.initState();
+    _isFirstAccount = myAppState!.currentAccount() == null;
     _internalId = widget.internalId;
     if (_internalId != null) {
       var a = Util.getAccount(_internalId!);
@@ -137,6 +139,7 @@ class _AccountPageState extends State<AccountPage> with Store {
     children.add(ElevatedButton(
       onPressed: isValidAccount()
           ? () async {
+              var doneLoading = myAppState!.showLoading(context);
               setState(() {
                 _errors.clear();
               });
@@ -165,20 +168,18 @@ class _AccountPageState extends State<AccountPage> with Store {
                         },
                         method: 'PUT');
               }
-              var err = client.checkError(result);
-              if (err != null) {
-                setState(() {
+              doneLoading();
+              setState(() {
+                var err = client.checkError(result);
+                if (err != null) {
                   _errors = err;
-                });
-                return;
-              }
-              if (!(result!['active'] as bool)) {
-                setState(() {
+                } else if (!(result!['active'] as bool)) {
                   _errors['message'] = 'inactive account';
-                });
-                return;
-              }
-              _account.admin = result['admin'] as bool;
+                }
+              });
+              if (_errors.length > 0) return;
+
+              _account.admin = result!['admin'] as bool;
               _account.id = result['id'];
               var newActiveId =
                   Util.saveAccount(_account, internalId: _internalId);
@@ -186,7 +187,10 @@ class _AccountPageState extends State<AccountPage> with Store {
                 Util.setActiveAccountId(newActiveId);
                 myAppState!.updateAccount();
               }
-              Navigator.of(context).pop();
+              if (_isFirstAccount)
+                Navigator.of(context).pushReplacementNamed('/home');
+              else
+                Navigator.of(context).pop();
             }
           : null,
       child: Text(
@@ -228,9 +232,7 @@ class _AccountPageState extends State<AccountPage> with Store {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Account Setup"),
-      ),
+      appBar: AppBar(title: Text("Account Setup")),
       body: SingleChildScrollView(
         child: Column(
           children: children,

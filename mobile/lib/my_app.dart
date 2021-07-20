@@ -35,6 +35,21 @@ class MyAppState extends State<MyApp> with Store {
     });
   }
 
+  Function showLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
+    );
+
+    return () => Navigator.pop(context);
+  }
+
   Account? currentAccount() {
     return _selectedAccount;
   }
@@ -47,9 +62,9 @@ class MyAppState extends State<MyApp> with Store {
         theme: ThemeData(
             primarySwatch: Colors.blueGrey,
             brightness: _isDarkMode ? Brightness.dark : Brightness.light),
-        initialRoute: _selectedAccount == -1 ? '/account' : '/',
+        initialRoute: _selectedAccount == null ? '/account' : '/home',
         routes: {
-          '/': (context) => MainPage(),
+          '/home': (context) => MainPage(),
           '/account': (context) => AccountPage(),
           '/settings': (context) => SettingsPage(),
         });

@@ -1,18 +1,25 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
-import 'package:flutter/material.dart';
-import 'package:dmedia/preference.dart';
-import 'package:dmedia/db_migrate.dart';
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:filesystem_picker/filesystem_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sqflite/sqflite.dart';
+
+import 'package:dmedia/db_migrate.dart';
+import 'package:dmedia/preference.dart';
 
 const bool isRelease = bool.fromEnvironment("dart.vm.product");
 const String settingsDarkMode = 'dark_mode';
 const String settingsAccounts = 'accounts';
 const String settingsAccount = 'account';
+const String settingsAccountSettings = 'account_settings';
 const String settingsIdCounter = 'id_ctr';
 const String taskSync = 'sync';
 
@@ -50,6 +57,51 @@ class Account {
   @override
   String toString() {
     return username + "@" + serverUrl;
+  }
+}
+
+class AccountSettings {
+  int duration = 0;
+  bool wifiEnabled = false;
+  bool charging = false;
+  bool idle = false;
+  List<String> folders = [];
+  AccountSettings({
+    required this.duration,
+    required this.wifiEnabled,
+    required this.charging,
+    required this.idle,
+    required this.folders,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'duration': duration,
+      'wifiEnabled': wifiEnabled,
+      'charging': charging,
+      'idle': idle,
+      'folders': folders,
+    };
+  }
+
+  factory AccountSettings.fromMap(Map<String, dynamic> map) {
+    return AccountSettings(
+      duration: map['duration'],
+      wifiEnabled: map['wifiEnabled'],
+      charging: map['charging'],
+      idle: map['idle'],
+      folders: List<String>.from(map['folders']),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory AccountSettings.fromJson(String source) =>
+      AccountSettings.fromMap(json.decode(source));
+
+  @override
+  String toString() {
+    return 'AccountSettings(duration: $duration, wifiEnabled: $wifiEnabled, charging: $charging, idle: $idle, folders: $folders)';
   }
 }
 
@@ -123,6 +175,43 @@ class Client {
 class Util {
   static Map<int, Client> Clients = {};
 
+  static Future<void> chooseDirectory(
+      BuildContext context, Function(Directory) onSelect) async {
+    if (await Permission.storage.request().isGranted) {
+      var dirs = await getExternalStorageDirectories();
+      if (dirs != null) {
+        Function(String) dirSelector = (storagePath) async {
+          var path = await FilesystemPicker.open(
+            title: 'Select Folder',
+            context: context,
+            rootDirectory: Directory(storagePath),
+            fsType: FilesystemType.folder,
+            pickText: 'Choose Directory',
+            folderIconColor: Colors.teal,
+          );
+          if (path != null) {
+            var dir = Directory(path);
+            print('Dir: ' +
+                json.encode(
+                    dir.listSync().map((d) => d.path.toString()).toList()));
+            onSelect(dir);
+          }
+        };
+
+        var storageOptions = dirs
+            .map((d) => d.path.substring(0, d.path.indexOf('/Android/')))
+            .toList();
+        if (storageOptions.length == 1)
+          await dirSelector(storageOptions[0]);
+        else
+          dialogList(context, "Select Storage", storageOptions,
+              (_, selected) async {
+            await dirSelector(selected);
+          });
+      }
+    }
+  }
+
   static String dateTimeToString(DateTime dt) {
     return dateTimeFormat.format(dt);
   }
@@ -176,12 +265,33 @@ class Util {
     return internalId;
   }
 
-  static void confirmDialog(BuildContext context, Function() onConfirm) {
+  static Map<int, AccountSettings> getAllAccountSettings() {
+    Map<String, dynamic> result =
+        Preference.getJson(settingsAccountSettings, def: {});
+    return result.map((key, value) =>
+        MapEntry(int.parse(key), AccountSettings.fromJson(value)));
+  }
+
+  static AccountSettings? getAccountSettings(int internalId) {
+    var settings = getAllAccountSettings();
+    return settings[internalId];
+  }
+
+  static void saveAccountSettings(
+      AccountSettings accountSettings, int internalId) {
+    var settings = getAllAccountSettings();
+    settings[internalId] = accountSettings;
+    Preference.setJson(settingsAccountSettings,
+        settings.map((k, v) => MapEntry(k.toString(), v)));
+  }
+
+  static void confirmDialog(BuildContext context, Function() onConfirm,
+      {String message = 'Are you sure?'}) {
     showDialog(
         context: context,
         builder: (BuildContext ctx) {
           return AlertDialog(
-            content: new Text("Are you sure?"),
+            content: new Text(message),
             actions: <Widget>[
               new ElevatedButton(
                 child: new Text("No"),
