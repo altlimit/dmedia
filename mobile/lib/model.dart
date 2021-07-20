@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-
+import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart';
 import 'package:flutter/material.dart';
 import 'package:dmedia/preference.dart';
+import 'package:dmedia/db_migrate.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 const bool isRelease = bool.fromEnvironment("dart.vm.product");
 const String settingsDarkMode = 'dark_mode';
@@ -12,6 +15,8 @@ const String settingsAccounts = 'accounts';
 const String settingsAccount = 'account';
 const String settingsIdCounter = 'id_ctr';
 const String taskSync = 'sync';
+
+var dateTimeFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
 
 class Account {
   int id = 0;
@@ -118,6 +123,10 @@ class Client {
 class Util {
   static Map<int, Client> Clients = {};
 
+  static String dateTimeToString(DateTime dt) {
+    return dateTimeFormat.format(dt);
+  }
+
   static Client getClient(int internalId) {
     if (!Clients.containsKey(internalId)) {
       Clients[internalId] = Client(getAccount(internalId)!);
@@ -211,5 +220,36 @@ class Util {
         return dialog;
       },
     );
+  }
+}
+
+class DBProvider {
+  static final DBProvider _instance = new DBProvider.internal();
+
+  factory DBProvider() => _instance;
+  DBProvider.internal();
+
+  static Map<int, Database> _dbs = {};
+
+  Future<Database> open(int internalId) async {
+    if (!_dbs.containsKey(internalId)) {
+      var path = await getDatabasesPath();
+      var dbPath = p.join(path, 'account_$internalId.db');
+      _dbs[internalId] =
+          await openDatabase(dbPath, version: dbMigrations.length,
+              onCreate: (Database db, int version) async {
+        for (var i = 0; i < version; i++) await db.execute(dbMigrations[i]);
+      }, onUpgrade: (Database db, oldVersion, newVersion) async {
+        for (var i = oldVersion; i < newVersion; i++)
+          await db.execute(dbMigrations[i]);
+      });
+    }
+    return _dbs[internalId]!;
+  }
+
+  Future<void> test(int internalId) async {
+    var db = await open(internalId);
+    var rows = await db.rawQuery('SELECT * FROM media');
+    print('Rows: ' + json.encode(rows));
   }
 }

@@ -20,6 +20,7 @@ class TabElement {
 }
 
 class _MainPage extends State<MainPage> with Store {
+  final _db = DBProvider();
   int _tabIndex = 0;
   final List<TabElement> _tabs = [
     TabElement(
@@ -102,6 +103,7 @@ class _MainPage extends State<MainPage> with Store {
                 IconButton(
                   icon: Icon(Icons.account_circle),
                   onPressed: () async {
+                    print('Date: ' + Util.dateTimeToString(DateTime.now()));
                     // Preference.clear();
                     // await Bg.manager()
                     //   ..registerOneOffTask('1000', taskSync,

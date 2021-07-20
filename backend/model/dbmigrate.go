@@ -9,7 +9,7 @@ var (
 			public INTEGER NOT NULL DEFAULT 0,
 			checksum TEXT NOT NULL,
 			ctype TEXT NOT NULL,
-			created DATE NOT NULL,
+			created DATETIME NOT NULL,
 			modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			size INTEGER NOT NULL DEFAULT 0,
 			meta JSON

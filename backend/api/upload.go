@@ -16,6 +16,7 @@ func (s *Server) handleUpload() http.HandlerFunc {
 			content []byte
 		)
 		fName := r.FormValue("name")
+		fallbackDate := r.FormValue("fallbackDate")
 		// fetch from URL
 		blobURL := r.FormValue("url")
 		if blobURL != "" {
@@ -62,7 +63,7 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		id, err := u.AddMedia(fName, cType, content)
+		id, err := u.AddMedia(fName, cType, content, fallbackDate)
 		if err != nil {
 			return err
 		}

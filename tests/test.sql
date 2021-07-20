@@ -20,3 +20,11 @@ select strftime('%Y-%m-%d', created) as created, strftime('%Y-%m-%d %H:%M:%S', m
 ---
 
 delete from media where id = 3;
+
+---
+
+update media set modified = CURRENT_TIMESTAMP;
+
+---
+
+select datetime(CURRENT_TIMESTAMP, 'localtime');

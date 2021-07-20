@@ -97,13 +97,23 @@ func (u *User) Save() error {
 }
 
 // AddMedia adds new media to table
-func (u *User) AddMedia(name string, cType string, content []byte) (int64, error) {
+func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT string) (int64, error) {
 	var (
-		exd     string
-		isVideo bool
-		meta    *Meta
+		exd         string
+		isVideo     bool
+		meta        *Meta
+		createdTime time.Time
+		err         error
 	)
-	created := time.Now().UTC().Format(dateFormat)
+	if fallbackDT != "" {
+		createdTime, err = time.Parse(dateTimeFormat, fallbackDT)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		createdTime = time.Now()
+	}
+	created := createdTime.Format(dateTimeFormat)
 	if strings.Index(cType, "image/") == 0 {
 		// read exif info
 		x, err := exif.Decode(bytes.NewReader(content))
@@ -121,7 +131,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 						if err == nil {
 							t, err := time.Parse("2006:01:02 15:04:05", dts)
 							if err == nil {
-								created = t.Format(dateFormat)
+								created = t.Format(dateTimeFormat)
 								break
 							}
 						}
@@ -191,7 +201,7 @@ func (u *User) AddMedia(name string, cType string, content []byte) (int64, error
 	if err != nil {
 		return 0, err
 	}
-	pDir := filepath.Join(dp, created, util.I64toa(id))
+	pDir := filepath.Join(dp, created[0:10], util.I64toa(id))
 	if err := os.MkdirAll(pDir, os.ModeDir); err != nil {
 		return 0, err
 	}

@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5454
-@auth = Basic a:a
+@auth = Basic ab:aaa
 
 ###
 
@@ -46,7 +46,10 @@ POST {{baseUrl}}/api/upload
 Authorization: {{auth}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jjyQ
 
+------WebKitFormBoundaryosFv4xxeUbP0jjyQ
+Content-Disposition: form-data; name="fallbackDate"
 
+2021-01-02 15:04:05
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ
 Content-Disposition: form-data; name="url"
 
@@ -64,7 +67,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jj
 Content-Disposition: form-data; name="file"; filename="test.jpg"
 Content-Type: image/jpeg
 
-< ./test.jpg
+< ./test2.jpg
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
 
 ###
