@@ -272,13 +272,15 @@ class Util {
         MapEntry(int.parse(key), AccountSettings.fromJson(value)));
   }
 
-  static AccountSettings? getAccountSettings(int internalId) {
+  static AccountSettings? getAccountSettings({int? internalId}) {
+    if (internalId == null) internalId = getActiveAccountId();
     var settings = getAllAccountSettings();
     return settings[internalId];
   }
 
-  static void saveAccountSettings(
-      AccountSettings accountSettings, int internalId) {
+  static void saveAccountSettings(AccountSettings accountSettings,
+      {int? internalId}) {
+    if (internalId == null) internalId = getActiveAccountId();
     var settings = getAllAccountSettings();
     settings[internalId] = accountSettings;
     Preference.setJson(settingsAccountSettings,
@@ -309,6 +311,45 @@ class Util {
             ],
           );
         });
+  }
+
+  static void inputDialog(
+      BuildContext context, String title, Function(String) onValue,
+      {String? hint, String? def, TextInputType? inputType}) async {
+    final controller = TextEditingController(text: def != null ? def : "");
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextFormField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: inputType,
+            decoration: InputDecoration(hintText: hint),
+          ),
+          actions: <Widget>[
+            ElevatedButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            ElevatedButton(
+              child: Text('Ok'),
+              onPressed: () {
+                onValue(controller.text);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   static void dialogList(BuildContext context, String title,
