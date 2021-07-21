@@ -22,6 +22,7 @@ class TabElement {
 class _MainPage extends State<MainPage> with Store {
   final _db = DBProvider();
   int _tabIndex = 0;
+  BuildContext? _buildContext;
   final List<TabElement> _tabs = [
     TabElement(
         "Gallery",
@@ -82,9 +83,19 @@ class _MainPage extends State<MainPage> with Store {
   void initState() {
     super.initState();
 
-    Bg.on(taskSync, 'syncing', (m) {
-      print('Sync: $m');
+    Bg.on(taskSync, 'message', (d) {
+      if (_buildContext != null) {
+        var data = d as Map<String, String>;
+        if (data.containsKey('message'))
+          Util.showMessage(context, data['message']!);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    Bg.off(taskSync, name: 'message');
+    super.dispose();
   }
 
   void onTabTapped(int index) {
@@ -95,6 +106,7 @@ class _MainPage extends State<MainPage> with Store {
 
   @override
   Widget build(BuildContext context) {
+    _buildContext = context;
     return Scaffold(
         body: CustomScrollView(
           slivers: <Widget>[
@@ -103,6 +115,10 @@ class _MainPage extends State<MainPage> with Store {
                 IconButton(
                   icon: Icon(Icons.account_circle),
                   onPressed: () async {
+                    Util.showMessage(context, 'Hello World');
+                    // Util.runSingleInstance('test', () {
+                    //   print('Called');
+                    // });
                     // Preference.clear();
                     // await Bg.manager()
                     //   ..registerOneOffTask('1000', taskSync,

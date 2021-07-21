@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:workmanager/workmanager.dart' as wm;
 import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
@@ -65,14 +66,29 @@ class AccountSettings {
   bool wifiEnabled = false;
   bool charging = false;
   bool idle = false;
+  bool notify = false;
+  bool enabled = false;
   List<String> folders = [];
+
   AccountSettings({
     required this.duration,
     required this.wifiEnabled,
     required this.charging,
     required this.idle,
+    required this.notify,
+    required this.enabled,
     required this.folders,
   });
+
+  wm.Constraints getConstraints() {
+    return wm.Constraints(
+        networkType:
+            wifiEnabled ? wm.NetworkType.unmetered : wm.NetworkType.connected,
+        requiresBatteryNotLow: false,
+        requiresCharging: charging,
+        requiresDeviceIdle: idle,
+        requiresStorageNotLow: false);
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -80,6 +96,8 @@ class AccountSettings {
       'wifiEnabled': wifiEnabled,
       'charging': charging,
       'idle': idle,
+      'notify': notify,
+      'enabled': enabled,
       'folders': folders,
     };
   }
@@ -90,6 +108,8 @@ class AccountSettings {
       wifiEnabled: map['wifiEnabled'],
       charging: map['charging'],
       idle: map['idle'],
+      notify: map['notify'],
+      enabled: map['enabled'],
       folders: List<String>.from(map['folders']),
     );
   }
@@ -101,7 +121,52 @@ class AccountSettings {
 
   @override
   String toString() {
-    return 'AccountSettings(duration: $duration, wifiEnabled: $wifiEnabled, charging: $charging, idle: $idle, folders: $folders)';
+    return 'AccountSettings(duration: $duration, wifiEnabled: $wifiEnabled, charging: $charging, idle: $idle, notify: $notify, enabled: $enabled, folders: $folders)';
+  }
+
+  AccountSettings copyWith({
+    int? duration,
+    bool? wifiEnabled,
+    bool? charging,
+    bool? idle,
+    bool? notify,
+    bool? enabled,
+    List<String>? folders,
+  }) {
+    return AccountSettings(
+      duration: duration ?? this.duration,
+      wifiEnabled: wifiEnabled ?? this.wifiEnabled,
+      charging: charging ?? this.charging,
+      idle: idle ?? this.idle,
+      notify: notify ?? this.notify,
+      enabled: enabled ?? this.enabled,
+      folders: folders ?? this.folders,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is AccountSettings &&
+        other.duration == duration &&
+        other.wifiEnabled == wifiEnabled &&
+        other.charging == charging &&
+        other.idle == idle &&
+        other.notify == notify &&
+        other.enabled == enabled &&
+        listEquals(other.folders, folders);
+  }
+
+  @override
+  int get hashCode {
+    return duration.hashCode ^
+        wifiEnabled.hashCode ^
+        charging.hashCode ^
+        idle.hashCode ^
+        notify.hashCode ^
+        enabled.hashCode ^
+        folders.hashCode;
   }
 }
 
@@ -174,6 +239,44 @@ class Client {
 
 class Util {
   static Map<int, Client> Clients = {};
+
+  static void showMessage(BuildContext context, String message) {
+    final scaffold = ScaffoldMessenger.of(context);
+    scaffold.showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
+  }
+
+  static Function showLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
+    );
+
+    return () => Navigator.pop(context);
+  }
+
+  static Future<void> runSingleInstance(String key, Function callback) async {
+    var tmpPath = await getTemporaryDirectory();
+    var lockPath = Directory(p.join(tmpPath.path, 'locks'));
+    lockPath.create(recursive: true);
+    var lockFile = File(p.join(lockPath.path, key + '.lock'));
+    if (!(await lockFile.exists())) await lockFile.create();
+    var raf = await lockFile.open(mode: FileMode.write);
+    await raf.lock(FileLock.exclusive);
+    callback();
+    var f = await File(lockFile.path).open(mode: FileMode.write);
+    await f.lock(FileLock.exclusive);
+    await raf.close();
+  }
 
   static Future<void> chooseDirectory(
       BuildContext context, Function(Directory) onSelect) async {

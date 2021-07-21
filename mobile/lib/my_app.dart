@@ -5,6 +5,7 @@ import 'package:dmedia/preference.dart';
 import 'package:dmedia/settings_page.dart';
 import 'package:dmedia/account_page.dart';
 import 'package:dmedia/main_page.dart';
+import 'package:dmedia/background.dart';
 
 class MyApp extends StatefulWidget {
   MyApp({Key? key}) : super(key: key);
@@ -33,21 +34,6 @@ class MyAppState extends State<MyApp> with Store {
     setState(() {
       _selectedAccount = Util.getActiveAccount();
     });
-  }
-
-  Function showLoading(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false,
-          child: Center(child: CircularProgressIndicator()),
-        );
-      },
-    );
-
-    return () => Navigator.pop(context);
   }
 
   Account? currentAccount() {

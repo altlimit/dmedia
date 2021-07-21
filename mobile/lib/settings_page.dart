@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dmedia/model.dart';
 import 'package:dmedia/preference.dart';
 import 'package:dmedia/store.dart';
-import 'dart:io';
-import 'dart:convert';
+import 'package:dmedia/background.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -28,6 +27,8 @@ class _SettingsPage extends State<SettingsPage> with Store {
               wifiEnabled: true,
               charging: false,
               idle: true,
+              notify: false,
+              enabled: false,
               folders: []);
     });
   }
@@ -52,9 +53,25 @@ class _SettingsPage extends State<SettingsPage> with Store {
           }),
       Center(child: const Text('Sync Settings')),
       ListTile(
+        title: const Text('Manage Folders'),
+        subtitle: const Text('Manage directories to sync'),
+        trailing: Icon(Icons.arrow_right),
+        onTap: () async {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      FolderSettingsPage(_accountSettings.folders, (folders) {
+                        _accountSettings.folders = folders;
+                        saveChanges();
+                      })));
+        },
+      ),
+      ListTile(
         title: const Text('Interval'),
-        subtitle: const Text(
-            'In minutes, how often it will sync directories. (Min 15)'),
+        subtitle: Text('Sync directories every ' +
+            _accountSettings.duration.toString() +
+            ' minutes.'),
         trailing: Text(_accountSettings.duration.toString()),
         onTap: () async {
           Util.inputDialog(context, 'Sync Interval (Minutes)', (v) {
@@ -103,21 +120,39 @@ class _SettingsPage extends State<SettingsPage> with Store {
               saveChanges();
             });
           }),
-      ListTile(
-        title: const Text('Manage Folders'),
-        subtitle: const Text('Manage directories to sync'),
-        trailing: Icon(Icons.arrow_right),
-        onTap: () async {
-          Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      FolderSettingsPage(_accountSettings.folders, (folders) {
-                        _accountSettings.folders = folders;
-                        saveChanges();
-                      })));
-        },
-      ),
+      SwitchListTile(
+          title: const Text('Notifications'),
+          subtitle: const Text('Get notified when media is synced.'),
+          value: _accountSettings.notify,
+          onChanged: (bool value) {
+            setState(() {
+              _accountSettings.notify = value;
+              saveChanges();
+            });
+          }),
+      SwitchListTile(
+          title: const Text('Enable Schedule'),
+          subtitle: Text('Runs sync every ' +
+              _accountSettings.duration.toString() +
+              ' minutes.'),
+          value: _accountSettings.enabled,
+          onChanged: (bool value) {
+            setState(() {
+              _accountSettings.enabled = value;
+              saveChanges();
+            });
+          }),
+      if (!_accountSettings.enabled) ...[
+        ListTile(
+          title: const Text('Run Sync'),
+          subtitle: const Text('Run sync in background now.'),
+          onTap: () async {
+            await Bg.scheduleTask(
+                Util.getActiveAccountId().toString(), taskSync,
+                isOnce: true);
+          },
+        )
+      ],
     ];
     return Scaffold(
       appBar: AppBar(
@@ -161,7 +196,7 @@ class _FolderSettingsPage extends State<FolderSettingsPage> with Store {
       body: Column(
         children: [
           ListTile(
-            title: const Text('Add Directory'),
+            title: Center(child: const Text('Add Directory')),
             onTap: () async {
               await Util.chooseDirectory(
                   context,
@@ -179,14 +214,14 @@ class _FolderSettingsPage extends State<FolderSettingsPage> with Store {
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(_folders[index]),
-                  onTap: () {
+                  onLongPress: () {
                     Util.confirmDialog(
                         context,
                         () => setState(() {
                               _folders.removeAt(index);
                               _onUpdate(_folders);
                             }),
-                        message: 'Are you sure you want to delete?');
+                        message: 'Delete path?');
                   },
                 );
               },

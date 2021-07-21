@@ -18,11 +18,26 @@ void callbackDispatcher() {
 
   Workmanager().executeTask((task, inputData) async {
     await Preference.load();
+    var success = true;
     print('Native called background task: $task ->' + json.encode(inputData));
-    print('Prefs: ' + Preference.getString(settingsAccounts, def: '')!);
-    emit(task, {'Test': 123, 'ABC': 123});
-    return Future.value(true);
+    try {
+      switch (task) {
+        case taskSync:
+          await Tasks.syncDirectories((d) => emit(task, d));
+          break;
+      }
+    } on Exception catch (e) {
+      success = false;
+      print('FailedTask: ' + e.toString());
+    }
+    return success;
   });
+}
+
+class Tasks {
+  static Future<void> syncDirectories(Function(dynamic) emit) async {
+    emit({'message': 'Sync completed'});
+  }
 }
 
 class Bg {
@@ -70,5 +85,14 @@ class Bg {
   static Future<Workmanager> manager() async {
     await init();
     return Workmanager();
+  }
+
+  static Future<void> scheduleTask(String id, String taskName,
+      {bool isOnce = false, Constraints? constraints}) async {
+    await init();
+    var wm = Workmanager();
+    var m = isOnce ? wm.registerOneOffTask : wm.registerPeriodicTask;
+    await wm.cancelByUniqueName(id);
+    await m(id, taskName, constraints: constraints);
   }
 }

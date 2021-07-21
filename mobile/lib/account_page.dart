@@ -139,7 +139,7 @@ class _AccountPageState extends State<AccountPage> with Store {
     children.add(ElevatedButton(
       onPressed: isValidAccount()
           ? () async {
-              var doneLoading = myAppState!.showLoading(context);
+              var doneLoading = Util.showLoading(context);
               setState(() {
                 _errors.clear();
               });
