@@ -12,6 +12,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPage extends State<SettingsPage> with Store {
   late bool _isDarkMode;
   late AccountSettings _accountSettings;
+  final _db = DBProvider();
 
   @override
   void initState() {
@@ -151,7 +152,18 @@ class _SettingsPage extends State<SettingsPage> with Store {
                 Util.getActiveAccountId().toString(), taskSync,
                 isOnce: true);
           },
-        )
+        ),
+        ListTile(
+          title: const Text('Delete Database'),
+          subtitle: const Text('Forces full sync from server.'),
+          trailing: Icon(Icons.sync),
+          onTap: () async {
+            Util.confirmDialog(context, () async {
+              await _db.clearDbs(internalId: Util.getActiveAccountId());
+              mainPageState?.reload();
+            });
+          },
+        ),
       ],
     ];
     return Scaffold(

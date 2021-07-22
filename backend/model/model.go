@@ -55,7 +55,7 @@ func getDB(userID int64) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", p)
 	db.SetMaxOpenConns(1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getDB sql.Open error: %v", err)
 	}
 	if openedDBs == nil {
 		openedDBs = make(map[int64]*DB)
@@ -96,21 +96,21 @@ func getDB(userID int64) (*sql.DB, error) {
 		if err.Error() == "no such table: migrations" {
 			_, err = db.Exec(dbMigrateTable)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("getDB db.Exec 1 error: %v", err)
 			}
 		} else {
-			return nil, err
+			return nil, fmt.Errorf("getDB r.Scan error: %v", err)
 		}
 	}
 	if tdb > version {
 		for i := version; i < tdb; i++ {
 			_, err = db.Exec(migrations[i])
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("getDB db.Exec 2 error: %v", err)
 			}
 		}
 		if _, err := db.Exec(`UPDATE migrations SET version = ?`, tdb); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getDB db.Exec 3 error: %v", err)
 		}
 		log.Printf("Migrated db to %d", tdb)
 	}

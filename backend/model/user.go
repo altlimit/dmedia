@@ -21,8 +21,8 @@ import (
 
 const (
 	mediaFields = `
-		id, name, public, checksum, ctype, path, 
-		strftime('%Y-%m-%d', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified, 
+		id, name, public, checksum, ctype,
+		strftime('%Y-%m-%d %H:%M:%S', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified, 
 		size, meta`
 	userFields = `
 		id, name, password, admin, active
@@ -37,7 +37,8 @@ var (
 )
 
 type (
-	User struct {
+	DateTime time.Time
+	User     struct {
 		ID       int64  `json:"id"`
 		Name     string `json:"username" validate:"required"`
 		Password string `json:"password,omitempty"`
@@ -46,16 +47,15 @@ type (
 	}
 
 	Media struct {
-		ID          int64     `json:"id"`
-		Name        string    `json:"name"`
-		Public      bool      `json:"public"`
-		Checksum    string    `json:"checksum"`
-		ContentType string    `json:"ctype"`
-		Path        string    `json:"path"`
-		Created     time.Time `json:"created"`
-		Modified    time.Time `json:"modified"`
-		Size        int       `json:"size"`
-		Meta        *Meta     `json:"meta"`
+		ID          int64    `json:"id"`
+		Name        string   `json:"name"`
+		Public      bool     `json:"public"`
+		Checksum    string   `json:"checksum"`
+		ContentType string   `json:"ctype"`
+		Created     DateTime `json:"created"`
+		Modified    DateTime `json:"modified"`
+		Size        int      `json:"size"`
+		Meta        *Meta    `json:"meta"`
 	}
 
 	Meta struct {
@@ -66,6 +66,11 @@ type (
 		Data map[string]*tiff.Tag
 	}
 )
+
+func (t DateTime) MarshalJSON() ([]byte, error) {
+	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(dateTimeFormat))
+	return []byte(stamp), nil
+}
 
 func (ed *ExifData) Walk(name exif.FieldName, tag *tiff.Tag) error {
 	if ed.Data == nil {
@@ -215,42 +220,51 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 	return id, nil
 }
 
-func (u *User) GetAllMedia(page int, limit int) ([]*Media, int, error) {
+func (u *User) GetAllMedia(lastMod string, page int, limit int) ([]*Media, int, error) {
 	db, err := getDB(u.ID)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("GetAllMedia getDB error: %v", err)
+	}
+	var (
+		where string
+		args  []interface{}
+	)
+	if lastMod != "" {
+		where = "WHERE modified >= ?"
+		args = append(args, lastMod)
 	}
 	row, err := db.Query(fmt.Sprintf(`
 		SELECT %s
-		FROM media 
+		FROM media
+		%s
 		ORDER BY id DESC
 		LIMIT %d
 		OFFSET %d
-	`, mediaFields, limit, (limit*page)-limit))
+	`, mediaFields, where, limit, (limit*page)-limit), args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("GetAllMedia db.Query error: %v", err)
 	}
 	defer row.Close()
 	var result []*Media
 	for row.Next() {
 		m, err := getRowMedia(row)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, fmt.Errorf("GetAllMedia getRowMedia error: %v", err)
 		}
 		result = append(result, m)
 	}
 	r := db.QueryRow(`SELECT COUNT(1) FROM media`)
 	var total int
 	if err := r.Scan(&total); err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("GetAllMedia db.QueryRow error: %v", err)
 	}
 	return result, total, nil
 }
 
-func (u *User) GetMediaByID(id int) (*Media, error) {
+func (u *User) GetMediaByID(id int64) (*Media, error) {
 	db, err := getDB(u.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetMediaByID getDB error: %v", err)
 	}
 	row, err := db.Query(fmt.Sprintf(`
 		SELECT %s
@@ -259,13 +273,13 @@ func (u *User) GetMediaByID(id int) (*Media, error) {
 		LIMIT 1
 	`, mediaFields), id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetMediaByID db.Query error: %v", err)
 	}
 	defer row.Close()
 	for row.Next() {
 		m, err := getRowMedia(row)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("GetMediaByID getRowMedia error: %v", err)
 		}
 		return m, nil
 	}
@@ -280,23 +294,23 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 		meta     sql.NullString
 		public   int
 	)
-	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &m.Path, &created, &modified, &m.Size, &meta); err != nil {
-		return nil, err
+	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &created, &modified, &m.Size, &meta); err != nil {
+		return nil, fmt.Errorf("getRowMedia row.Scan error: %v", err)
 	}
-	dt, err := time.Parse(dateFormat, created)
+	dt, err := time.Parse(dateTimeFormat, created)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getRowMedia time.Parse error: %v", err)
 	}
-	m.Created = dt
+	m.Created = DateTime(dt)
 	dt, err = time.Parse(dateTimeFormat, modified)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getRowMedia time.Parse 2 error: %v", err)
 	}
-	m.Modified = dt
+	m.Modified = DateTime(dt)
 	m.Public = public == 1
 	if meta.Valid && len(meta.String) > 0 {
 		if err := json.Unmarshal([]byte(meta.String), m.Meta); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getRowMedia json.Unmarshal error: %v", err)
 		}
 	}
 	return m, nil
@@ -319,7 +333,7 @@ func getRowUser(row *sql.Rows) (*User, error) {
 func GetUsers() ([]*User, error) {
 	db, err := getDB(0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetUsers getDB error: %v", err)
 	}
 	row, err := db.Query(fmt.Sprintf(`SELECT %s
 	FROM user`, userFields))
@@ -328,7 +342,7 @@ func GetUsers() ([]*User, error) {
 	for row.Next() {
 		u, err := getRowUser(row)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("GetUsers getRowUser error: %v", err)
 		}
 		result = append(result, u)
 	}
@@ -354,12 +368,12 @@ func GetUser(userID int64, name string) (*User, error) {
 	LIMIT 1`, userFields, field), val)
 	defer row.Close()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetUser db.Query error: %v", err)
 	}
 	for row.Next() {
 		u, err := getRowUser(row)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("GetUser getRowUser error: %v", err)
 		}
 		return u, nil
 	}
@@ -377,7 +391,7 @@ func saveUser(user *User) error {
 		insert into user(name, password, admin, active) 
 		values(?, ?, ?, ?)`, args...)
 		if err != nil {
-			return err
+			return fmt.Errorf("saveUser db.Exec error: %v", err)
 		}
 		id, err := res.LastInsertId()
 		if err == nil {
@@ -394,5 +408,5 @@ func saveUser(user *User) error {
 		WHERE id = ?
 		`, args...)
 	}
-	return err
+	return fmt.Errorf("saveUser db.Exec 2 error: %v", err)
 }

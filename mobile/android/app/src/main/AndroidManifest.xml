@@ -2,6 +2,7 @@
     package="com.example.dmedia">
    <application
         android:label="dmedia"
+        android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher">
         <activity

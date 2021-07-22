@@ -21,7 +21,7 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     await Preference.load();
     var success = true;
-    print('Native called background task: $task ->' + json.encode(inputData));
+    Util.debug('Background task: $task ->' + json.encode(inputData));
     try {
       switch (task) {
         case taskSync:
@@ -30,7 +30,7 @@ void callbackDispatcher() {
       }
     } on Exception catch (e) {
       success = false;
-      print('FailedTask: ' + e.toString());
+      Util.debug('FailedTask: ' + e.toString());
     }
     return success;
   });
@@ -40,27 +40,19 @@ class Tasks {
   static Future<void> syncDirectories(Function(dynamic) emit) async {
     for (var entry in Util.getAllAccountSettings().entries) {
       var account = Util.getAccount(entry.key);
-      final batchPath = p.join((await Util.getSyncDir(entry.key)).path,
-          DateTime.now().millisecondsSinceEpoch.toString() + '.json');
-      Map<String, int> uploaded = {};
       if (account != null) {
         var client = Client(account);
         for (var folder in entry.value.folders) {
-          print('Syncing ${entry.key} / $folder');
+          Util.debug('Syncing ${entry.key} / $folder');
           var dir = Directory(folder);
           var files = await dir.list().toList();
           for (var file in files) {
-            var id = await client.upload(file.path);
-            if (id > 0) {
-              print('Uploaded: $file -> $id');
-              uploaded[file.path] = id;
+            var media = await client.upload(file.path);
+            if (media != null) {
+              Util.debug('Uploaded: $file -> $media');
+              await file.delete();
             }
           }
-        }
-        if (uploaded.length > 0) {
-          await File(batchPath).writeAsString(json.encode(uploaded));
-          if (!isRelease)
-            print('Written $batchPath -> ' + json.encode(uploaded));
         }
       }
     }

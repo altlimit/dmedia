@@ -50,7 +50,7 @@ class MyAppState extends State<MyApp> with Store {
             brightness: _isDarkMode ? Brightness.dark : Brightness.light),
         initialRoute: _selectedAccount == null ? '/account' : '/home',
         routes: {
-          '/home': (context) => MainPage(),
+          '/home': (context) => MainPage(key: Store.mainPageStateKey),
           '/account': (context) => AccountPage(),
           '/settings': (context) => SettingsPage(),
         });
