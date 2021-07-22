@@ -143,7 +143,7 @@ class _SettingsPage extends State<SettingsPage> with Store {
               saveChanges();
             });
           }),
-      if (!_accountSettings.scheduled) ...[
+      if (!_accountSettings.scheduled)
         ListTile(
           title: const Text('Run Sync'),
           subtitle: const Text('Run sync in background now.'),
@@ -153,18 +153,17 @@ class _SettingsPage extends State<SettingsPage> with Store {
                 isOnce: true);
           },
         ),
-        ListTile(
-          title: const Text('Delete Database'),
-          subtitle: const Text('Forces full sync from server.'),
-          trailing: Icon(Icons.sync),
-          onTap: () async {
-            Util.confirmDialog(context, () async {
-              await _db.clearDbs(internalId: Util.getActiveAccountId());
-              mainPageState?.reload();
-            });
-          },
-        ),
-      ],
+      ListTile(
+        title: const Text('Delete Database'),
+        subtitle: const Text('Forces full sync from server.'),
+        trailing: Icon(Icons.sync),
+        onTap: () async {
+          Util.confirmDialog(context, () async {
+            await _db.clearDbs(internalId: Util.getActiveAccountId());
+            mainPageState?.reload();
+          });
+        },
+      ),
     ];
     return Scaffold(
       appBar: AppBar(

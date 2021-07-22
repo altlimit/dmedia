@@ -199,6 +199,7 @@ class Media {
   Widget image({Client? client, int? size}) {
     if (client == null) client = Util.getClient();
     return CachedNetworkImage(
+      fit: size != null ? BoxFit.cover : null,
       key: Key('thumb_' + id.toString()),
       httpHeaders: client.headers,
       imageUrl: getPath(client: client) +

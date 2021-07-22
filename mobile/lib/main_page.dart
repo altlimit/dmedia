@@ -4,8 +4,8 @@ import 'package:dmedia/account_page.dart';
 import 'package:dmedia/store.dart';
 import 'package:dmedia/preference.dart';
 import 'package:dmedia/background.dart';
+import 'package:dmedia/media_page.dart';
 import 'dart:convert';
-import 'package:video_player/video_player.dart';
 
 class MainPage extends StatefulWidget {
   MainPage({Key? key}) : super(key: key);
@@ -101,7 +101,7 @@ class MainPageState extends State<MainPage> with Store, WidgetsBindingObserver {
       case 'gallery':
         return SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3),
+              crossAxisCount: 4),
           delegate: SliverChildBuilderDelegate(
             (BuildContext context, int index) {
               final media = _loadedMedia[index];
@@ -256,98 +256,5 @@ class MainPageState extends State<MainPage> with Store, WidgetsBindingObserver {
                       label: tab.label,
                     ))
                 .toList()));
-  }
-}
-
-class ImageScreen extends StatelessWidget {
-  const ImageScreen({
-    Key? key,
-    @required this.media,
-  }) : super(key: key);
-
-  final Media? media;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      child: media!.image(),
-    );
-  }
-}
-
-class VideoScreen extends StatefulWidget {
-  const VideoScreen({
-    Key? key,
-    @required this.media,
-  }) : super(key: key);
-
-  final Media? media;
-
-  @override
-  _VideoScreenState createState() => _VideoScreenState();
-}
-
-class _VideoScreenState extends State<VideoScreen> {
-  late VideoPlayerController _controller;
-  bool initialized = false;
-
-  @override
-  void initState() {
-    _initVideo();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  _initVideo() {
-    final media = widget.media!;
-    final client = Util.getClient();
-    _controller = VideoPlayerController.network(media.getPath(client: client),
-        httpHeaders: client.headers)
-      ..setLooping(false)
-      ..initialize().then((_) => setState(() => initialized = true));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: initialized
-          // If the video is initialized, display it
-          ? Scaffold(
-              body: Center(
-                child: AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
-                  // Use the VideoPlayer widget to display the video.
-                  child: VideoPlayer(_controller),
-                ),
-              ),
-              floatingActionButton: FloatingActionButton(
-                onPressed: () {
-                  // Wrap the play or pause in a call to `setState`. This ensures the
-                  // correct icon is shown.
-                  setState(() {
-                    // If the video is playing, pause it.
-                    if (_controller.value.isPlaying) {
-                      _controller.pause();
-                    } else {
-                      // If the video is paused, play it.
-                      _controller.play();
-                    }
-                  });
-                },
-                // Display the correct icon depending on the state of the player.
-                child: Icon(
-                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                ),
-              ),
-            )
-          // If the video is not yet initialized, display a spinner
-          : Center(child: CircularProgressIndicator()),
-    );
   }
 }
