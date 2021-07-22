@@ -1,8 +1,10 @@
 import 'package:dmedia/model.dart';
 import 'package:dmedia/preference.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:path/path.dart' as p;
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:io';
 import 'dart:isolate';
 
 const bgChannelName = 'org.altlimit.dmedia';
@@ -36,6 +38,32 @@ void callbackDispatcher() {
 
 class Tasks {
   static Future<void> syncDirectories(Function(dynamic) emit) async {
+    for (var entry in Util.getAllAccountSettings().entries) {
+      var account = Util.getAccount(entry.key);
+      final batchPath = p.join((await Util.getSyncDir(entry.key)).path,
+          DateTime.now().millisecondsSinceEpoch.toString() + '.json');
+      Map<String, int> uploaded = {};
+      if (account != null) {
+        var client = Client(account);
+        for (var folder in entry.value.folders) {
+          print('Syncing ${entry.key} / $folder');
+          var dir = Directory(folder);
+          var files = await dir.list().toList();
+          for (var file in files) {
+            var id = await client.upload(file.path);
+            if (id > 0) {
+              print('Uploaded: $file -> $id');
+              uploaded[file.path] = id;
+            }
+          }
+        }
+        if (uploaded.length > 0) {
+          await File(batchPath).writeAsString(json.encode(uploaded));
+          if (!isRelease)
+            print('Written $batchPath -> ' + json.encode(uploaded));
+        }
+      }
+    }
     emit({'message': 'Sync completed'});
   }
 }

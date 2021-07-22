@@ -28,7 +28,7 @@ class _SettingsPage extends State<SettingsPage> with Store {
               charging: false,
               idle: true,
               notify: false,
-              enabled: false,
+              scheduled: false,
               folders: []);
     });
   }
@@ -135,14 +135,14 @@ class _SettingsPage extends State<SettingsPage> with Store {
           subtitle: Text('Runs sync every ' +
               _accountSettings.duration.toString() +
               ' minutes.'),
-          value: _accountSettings.enabled,
+          value: _accountSettings.scheduled,
           onChanged: (bool value) {
             setState(() {
-              _accountSettings.enabled = value;
+              _accountSettings.scheduled = value;
               saveChanges();
             });
           }),
-      if (!_accountSettings.enabled) ...[
+      if (!_accountSettings.scheduled) ...[
         ListTile(
           title: const Text('Run Sync'),
           subtitle: const Text('Run sync in background now.'),

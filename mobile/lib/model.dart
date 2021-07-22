@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:workmanager/workmanager.dart' as wm;
+
+import 'package:mime/mime.dart';
 import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' as hp;
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:workmanager/workmanager.dart' as wm;
 
 import 'package:dmedia/db_migrate.dart';
 import 'package:dmedia/preference.dart';
@@ -67,7 +70,7 @@ class AccountSettings {
   bool charging = false;
   bool idle = false;
   bool notify = false;
-  bool enabled = false;
+  bool scheduled = false;
   List<String> folders = [];
 
   AccountSettings({
@@ -76,7 +79,7 @@ class AccountSettings {
     required this.charging,
     required this.idle,
     required this.notify,
-    required this.enabled,
+    required this.scheduled,
     required this.folders,
   });
 
@@ -97,7 +100,7 @@ class AccountSettings {
       'charging': charging,
       'idle': idle,
       'notify': notify,
-      'enabled': enabled,
+      'scheduled': scheduled,
       'folders': folders,
     };
   }
@@ -109,7 +112,7 @@ class AccountSettings {
       charging: map['charging'],
       idle: map['idle'],
       notify: map['notify'],
-      enabled: map['enabled'],
+      scheduled: map['scheduled'],
       folders: List<String>.from(map['folders']),
     );
   }
@@ -118,87 +121,42 @@ class AccountSettings {
 
   factory AccountSettings.fromJson(String source) =>
       AccountSettings.fromMap(json.decode(source));
-
-  @override
-  String toString() {
-    return 'AccountSettings(duration: $duration, wifiEnabled: $wifiEnabled, charging: $charging, idle: $idle, notify: $notify, enabled: $enabled, folders: $folders)';
-  }
-
-  AccountSettings copyWith({
-    int? duration,
-    bool? wifiEnabled,
-    bool? charging,
-    bool? idle,
-    bool? notify,
-    bool? enabled,
-    List<String>? folders,
-  }) {
-    return AccountSettings(
-      duration: duration ?? this.duration,
-      wifiEnabled: wifiEnabled ?? this.wifiEnabled,
-      charging: charging ?? this.charging,
-      idle: idle ?? this.idle,
-      notify: notify ?? this.notify,
-      enabled: enabled ?? this.enabled,
-      folders: folders ?? this.folders,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is AccountSettings &&
-        other.duration == duration &&
-        other.wifiEnabled == wifiEnabled &&
-        other.charging == charging &&
-        other.idle == idle &&
-        other.notify == notify &&
-        other.enabled == enabled &&
-        listEquals(other.folders, folders);
-  }
-
-  @override
-  int get hashCode {
-    return duration.hashCode ^
-        wifiEnabled.hashCode ^
-        charging.hashCode ^
-        idle.hashCode ^
-        notify.hashCode ^
-        enabled.hashCode ^
-        folders.hashCode;
-  }
 }
 
 class Client {
   Account account;
   String selectedUrl = "";
-  Map<String, String> headers = {};
+  late Map<String, String> headers;
 
-  Client(this.account);
-
-  Future<dynamic> request(String path, {dynamic data, String? method}) async {
+  Client(this.account) {
     headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Basic ' +
           base64Encode(utf8.encode('${account.username}:${account.password}'))
     };
-    http.Response resp;
-    try {
-      if (selectedUrl.length == 0) {
-        var urls = account.serverUrl.split("|");
-        for (var i = 0; i < urls.length; i++) {
-          if (selectedUrl.length == 0) {
-            resp = await http
-                .get(Uri.parse(urls[i] + '/status'))
-                .timeout(Duration(seconds: 1));
-            if (resp.statusCode == 200) {
-              selectedUrl = urls[i];
-              break;
-            }
+  }
+
+  Future<void> init() async {
+    if (selectedUrl.length == 0) {
+      var urls = account.serverUrl.split("|");
+      for (var i = 0; i < urls.length; i++) {
+        if (selectedUrl.length == 0) {
+          var resp = await http
+              .get(Uri.parse(urls[i] + '/status'))
+              .timeout(Duration(seconds: 1));
+          if (resp.statusCode == 200) {
+            selectedUrl = urls[i];
+            break;
           }
         }
       }
+    }
+  }
+
+  Future<dynamic> request(String path, {dynamic data, String? method}) async {
+    http.Response resp;
+    try {
+      await init();
       var uri = Uri.parse(selectedUrl + path);
       if (data != null) {
         if (!isRelease) print('Payload: ' + json.encode(data));
@@ -220,6 +178,36 @@ class Client {
     } on Exception catch (e) {
       print('Error: ' + e.toString());
       return {'error': e.toString()};
+    }
+  }
+
+  Future<int> upload(String path) async {
+    try {
+      await init();
+      final uri = Uri.parse(selectedUrl + '/api/upload');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(headers);
+      final stat = await FileStat.stat(path);
+      request.fields['fallbackDate'] = Util.dateTimeToString(stat.modified);
+      var cType = lookupMimeType(path);
+      if (cType != null &&
+          (cType.startsWith('image/') || cType.startsWith('video/'))) {
+        request.files.add(http.MultipartFile.fromBytes(
+            'file', await File.fromUri(Uri.parse(path)).readAsBytes(),
+            filename: p.basename(path),
+            contentType: hp.MediaType.parse(cType)));
+
+        var response = await request.send();
+        if (response.statusCode == 200) {
+          return int.parse(await response.stream.bytesToString());
+        } else if (!isRelease) {
+          print('Response: ' + await response.stream.bytesToString());
+        }
+      }
+      return 0;
+    } catch (e) {
+      print('Error: ' + e.toString());
+      return 0;
     }
   }
 
@@ -319,6 +307,14 @@ class Util {
     return dateTimeFormat.format(dt);
   }
 
+  static Future<Directory> getSyncDir(int internalId) async {
+    final tmpDir = await getApplicationDocumentsDirectory();
+    final dir =
+        Directory(p.join(tmpDir.path, 'synced_' + internalId.toString()));
+    await dir.create();
+    return dir;
+  }
+
   static Client getClient(int internalId) {
     if (!Clients.containsKey(internalId)) {
       Clients[internalId] = Client(getAccount(internalId)!);
@@ -353,6 +349,11 @@ class Util {
   static void delAccount(int internalId) {
     var accounts = getAccounts();
     if (accounts.containsKey(internalId)) accounts.remove(internalId);
+    saveObjectPref(settingsAccounts, accounts);
+  }
+
+  static void saveObjectPref(String key, Map<int, dynamic> data) {
+    Preference.setJson(key, data.map((k, v) => MapEntry(k.toString(), v)));
   }
 
   static int saveAccount(Account account, {int? internalId}) {
@@ -363,8 +364,7 @@ class Util {
       Preference.setInt(settingsIdCounter, internalId + 1);
     }
     accounts[internalId] = account;
-    Preference.setJson(
-        settingsAccounts, accounts.map((k, v) => MapEntry(k.toString(), v)));
+    saveObjectPref(settingsAccounts, accounts);
     return internalId;
   }
 
@@ -381,13 +381,18 @@ class Util {
     return settings[internalId];
   }
 
+  static void delAccountSettings(int internalId) {
+    var settings = getAllAccountSettings();
+    if (settings.containsKey(internalId)) settings.remove(internalId);
+    saveObjectPref(settingsAccountSettings, settings);
+  }
+
   static void saveAccountSettings(AccountSettings accountSettings,
       {int? internalId}) {
     if (internalId == null) internalId = getActiveAccountId();
     var settings = getAllAccountSettings();
     settings[internalId] = accountSettings;
-    Preference.setJson(settingsAccountSettings,
-        settings.map((k, v) => MapEntry(k.toString(), v)));
+    saveObjectPref(settingsAccountSettings, settings);
   }
 
   static void confirmDialog(BuildContext context, Function() onConfirm,

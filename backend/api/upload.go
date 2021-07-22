@@ -2,6 +2,7 @@ package api
 
 import (
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path"
 
@@ -63,8 +64,12 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		log.Printf("Name;%s %s", fName, cType)
 		id, err := u.AddMedia(fName, cType, content, fallbackDate)
 		if err != nil {
+			if err == model.ErrNotSupported {
+				return newValidationErr("content_type", "not supported")
+			}
 			return err
 		}
 		return id

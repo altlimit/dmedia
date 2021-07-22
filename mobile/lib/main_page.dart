@@ -115,7 +115,7 @@ class _MainPage extends State<MainPage> with Store {
                 IconButton(
                   icon: Icon(Icons.account_circle),
                   onPressed: () async {
-                    Util.showMessage(context, 'Hello World');
+                    Tasks.syncDirectories((m) => print(m));
                     // Util.runSingleInstance('test', () {
                     //   print('Called');
                     // });

@@ -223,6 +223,7 @@ class _AccountPageState extends State<AccountPage> with Store {
               onPressed: () {
                 Util.confirmDialog(context, () {
                   Util.delAccount(_internalId!);
+                  Util.delAccountSettings(_internalId!);
                   Navigator.of(context).pop();
                 });
               },
