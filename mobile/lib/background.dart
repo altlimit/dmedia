@@ -47,9 +47,9 @@ class Tasks {
           var dir = Directory(folder);
           var files = await dir.list().toList();
           for (var file in files) {
-            var media = await client.upload(file.path);
-            if (media != null) {
-              Util.debug('Uploaded: $file -> $media');
+            var id = await client.upload(file.path);
+            if (id > 0) {
+              Util.debug('Uploaded: $file -> $id');
               await file.delete();
             }
           }

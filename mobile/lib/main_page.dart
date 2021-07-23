@@ -14,14 +14,6 @@ class MainPage extends StatefulWidget {
   MainPageState createState() => MainPageState();
 }
 
-class TabElement {
-  String label;
-  IconData icon;
-  String key;
-
-  TabElement(this.label, this.icon, this.key);
-}
-
 class MainPageState extends State<MainPage> with Store, WidgetsBindingObserver {
   final _db = DBProvider();
   int _tabIndex = 0;
@@ -125,13 +117,9 @@ class MainPageState extends State<MainPage> with Store, WidgetsBindingObserver {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => media.isVideo()
-                          ? VideoScreen(
-                              media: media,
-                            )
-                          : ImageScreen(
-                              media: media,
-                            ),
+                      builder: (_) => MediaScreen(
+                        media: media,
+                      ),
                     ),
                   );
                 },

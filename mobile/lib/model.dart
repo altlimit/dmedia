@@ -32,6 +32,14 @@ const String taskSync = 'sync';
 final dateTimeFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
 final dateFormat = DateFormat("yyyy-MM-dd");
 
+class TabElement {
+  String label;
+  IconData icon;
+  String key;
+
+  TabElement(this.label, this.icon, this.key);
+}
+
 class Account {
   int id;
   String serverUrl;
@@ -269,7 +277,7 @@ class Client {
     }
   }
 
-  Future<dynamic> upload(String path) async {
+  Future<int> upload(String path) async {
     try {
       await init();
       final uri = Uri.parse(selectedUrl + '/api/upload');
@@ -287,15 +295,15 @@ class Client {
 
         var response = await request.send();
         if (response.statusCode == 200) {
-          return json.decode(await response.stream.bytesToString());
+          return int.parse(await response.stream.bytesToString());
         } else if (!isRelease) {
           print('Response: ' + await response.stream.bytesToString());
         }
       }
-      return null;
+      return 0;
     } catch (e) {
       print('Error: ' + e.toString());
-      return null;
+      return 0;
     }
   }
 

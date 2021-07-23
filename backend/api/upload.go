@@ -72,13 +72,6 @@ func (s *Server) handleUpload() http.HandlerFunc {
 			}
 			return err
 		}
-		if id == 0 {
-			return errNotFound
-		}
-		media, err := u.GetMediaByID(id)
-		if err != nil {
-			return err
-		}
-		return media
+		return id
 	})
 }
