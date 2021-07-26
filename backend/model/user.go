@@ -408,5 +408,8 @@ func saveUser(user *User) error {
 		WHERE id = ?
 		`, args...)
 	}
-	return fmt.Errorf("saveUser db.Exec 2 error: %v", err)
+	if err != nil {
+		return fmt.Errorf("saveUser db.Exec 2 error: %v", err)
+	}
+	return nil
 }
