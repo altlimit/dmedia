@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,6 +100,21 @@ func (u *User) ValidPassword(password string) bool {
 // Save saves user to db
 func (u *User) Save() error {
 	return saveUser(u)
+}
+
+// AddMediaFromPath adds new media from local path
+func (u *User) AddMediaFromPath(path string) (int64, error) {
+	name := filepath.Base(path)
+	cType := mime.TypeByExtension(filepath.Ext(name))
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return u.AddMedia(name, cType, content, fi.ModTime().Format(dateTimeFormat))
 }
 
 // AddMedia adds new media to table
@@ -284,6 +300,28 @@ func (u *User) GetMediaByID(id int64) (*Media, error) {
 		return m, nil
 	}
 	return nil, ErrNotFound
+}
+
+func (u *User) DeleteMediaById(ids []int64) error {
+	db, err := getDB(u.ID)
+	if err != nil {
+		return fmt.Errorf("DeleteMediaById getDB error: %v", err)
+	}
+	var cleanIDs []string
+	for _, id := range ids {
+		cleanIDs = append(cleanIDs, util.I64toa(id))
+	}
+	_, err = db.Exec(fmt.Sprintf(`
+		UPDATE media
+		SET 
+			modified=CURRENT_TIMESTAMP,
+			deleted=CURRENT_TIMESTAMP
+		WHERE id IN (%s);
+	`, strings.Join(cleanIDs, ",")))
+	if err != nil {
+		return fmt.Errorf("DeleteMediaById db.Query error: %v", err)
+	}
+	return nil
 }
 
 func getRowMedia(row *sql.Rows) (*Media, error) {

@@ -11,12 +11,33 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:dmedia/models.dart';
 import 'package:dmedia/client.dart';
 import 'package:dmedia/preference.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class Util {
+  static FlutterLocalNotificationsPlugin? localNotify;
   static Map<int, Client> Clients = {};
 
   static void debug(Object msg) {
     if (!isRelease) print(msg);
+  }
+
+  static Future<FlutterLocalNotificationsPlugin> getLocalNotify() async {
+    if (localNotify == null) {
+      localNotify = FlutterLocalNotificationsPlugin();
+// initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('ic_launcher');
+      final InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
+
+      await localNotify!.initialize(initializationSettings,
+          onSelectNotification: selectNotification);
+    }
+    return localNotify!;
+  }
+
+  static Future selectNotification(dynamic payload) async {
+    debug('SelectNotification: $payload');
   }
 
   static void showMessage(BuildContext context, String message) {

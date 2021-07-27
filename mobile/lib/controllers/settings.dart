@@ -37,7 +37,7 @@ class SettingsController extends GetxController {
   onDeleteDbTap() async {
     Util.confirmDialog(Get.context!, () async {
       await db.clearDbs(internalId: Util.getActiveAccountId());
-      Get.find<HomeController>().onPullRefresh();
+      await Get.find<HomeController>().onPullRefresh();
     });
   }
 

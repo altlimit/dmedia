@@ -17,16 +17,25 @@ class HomeController extends SuperController {
     TabElement('Albums', Icons.photo_album, 'albums'),
     TabElement('Search', Icons.search, 'search'),
   ];
+  late ScrollController scrollController;
 
   @override
   void onInit() {
     super.onInit();
 
-    if (Util.getActiveAccountId() == 0) {
-      print('No Active account');
-      Get.toNamed('/account');
-      return;
-    }
+    scrollController = ScrollController();
+    scrollController.addListener(() async {
+      if (scrollController.offset >=
+              scrollController.position.maxScrollExtent &&
+          !scrollController.position.outOfRange) {
+        await loadMedia();
+      }
+      // if (scrollController.offset <=
+      //         scrollController.position.minScrollExtent &&
+      //     !scrollController.position.outOfRange) {
+      //   print('top');
+      // }
+    });
 
     Bg.on(taskSync, 'message', (d) async {
       var data = d as Map<String, String>;
@@ -42,7 +51,6 @@ class HomeController extends SuperController {
 
   @override
   void onResumed() async {
-    print('onResumed called');
     await db.syncMedia(Util.getActiveAccountId());
   }
 
@@ -62,15 +70,16 @@ class HomeController extends SuperController {
   }
 
   Future<void> loadMedia() async {
-    final result = await db.getRecentMedia(Util.getActiveAccountId(),
-        page: page,
-        countPages: pages == null
-            ? (totalPages) {
-                pages = totalPages;
-              }
-            : null);
-    if (page <= pages!) {
+    if (pages == null || page <= pages!) {
+      final result = await db.getRecentMedia(Util.getActiveAccountId(),
+          page: page,
+          countPages: pages == null
+              ? (totalPages) {
+                  pages = totalPages;
+                }
+              : null);
       loadedMedia.addAll(result);
+      Util.debug('Added ${result.length}');
       page++;
     }
   }
@@ -81,6 +90,12 @@ class HomeController extends SuperController {
 
   reload() {
     refreshIndicatorKey.currentState?.show();
+  }
+
+  deleteMedia(int index) async {
+    await db.deleteMedia(
+        Util.getActiveAccountId(), [(loadedMedia[index] as Media).id]);
+    loadedMedia.removeAt(index);
   }
 
   Future<String> onPullRefresh() async {

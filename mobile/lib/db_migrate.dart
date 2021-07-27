@@ -8,10 +8,12 @@ const List<String> dbMigrations = [
 			ctype TEXT NOT NULL,
 			created DATETIME NOT NULL,
 			modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      deleted DATETIME,
 			size INTEGER NOT NULL DEFAULT 0,
 			meta JSON
 		);
 		CREATE INDEX idx_modified on media(modified);
+    CREATE INDEX idx_deleted on media(deleted);
 		CREATE UNIQUE INDEX idx_checksum on media(checksum);
   """
 ];

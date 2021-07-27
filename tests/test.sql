@@ -3,7 +3,7 @@ from media;
 
 ---
 
-select * from media;
+select * from media LIMIT 10;
 
 ---
 
@@ -23,7 +23,7 @@ delete from media where id = 3;
 
 ---
 
-update media set modified = CURRENT_TIMESTAMP;
+update media set deleted = CURRENT_TIMESTAMP WHERE id IN (1,2);
 
 ---
 

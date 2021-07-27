@@ -2,6 +2,7 @@ import 'package:dmedia/models.dart';
 import 'package:dmedia/util.dart';
 import 'package:dmedia/client.dart';
 import 'package:dmedia/preference.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 import 'dart:convert';
 import 'dart:ui';
@@ -21,6 +22,7 @@ void callbackDispatcher() {
 
   Workmanager().executeTask((task, inputData) async {
     await Preference.load();
+
     var success = true;
     Util.debug('Background task: $task ->' + json.encode(inputData));
     try {
@@ -41,6 +43,7 @@ class Tasks {
   static Future<void> syncDirectories(Function(dynamic) emit) async {
     for (var entry in Util.getAllAccountSettings().entries) {
       var account = Util.getAccount(entry.key);
+      var uploaded = 0;
       if (account != null) {
         var client = Client(account);
         for (var folder in entry.value.folders) {
@@ -52,8 +55,20 @@ class Tasks {
             if (id > 0) {
               Util.debug('Uploaded: $file -> $id');
               await file.delete();
+              uploaded++;
             }
           }
+        }
+        if (entry.value.notify && uploaded > 0) {
+          final notify = await Util.getLocalNotify();
+          notify.show(
+              account.id,
+              'Sync Completed',
+              '${account} synced $uploaded files',
+              NotificationDetails(
+                  android: AndroidNotificationDetails('syncDirectories',
+                      'syncDirectories', 'Background process syncDirectories',
+                      showWhen: true)));
         }
       }
     }

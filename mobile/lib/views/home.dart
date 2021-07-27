@@ -34,32 +34,12 @@ class HomeView extends StatelessWidget {
               ),
             ));
       case 'albums':
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (BuildContext context, int index) {
-              return Container(
-                color: index.isOdd ? Colors.white : Colors.black12,
-                height: 100.0,
-                child: Center(
-                  child: Text('$index', textScaleFactor: 5),
-                ),
-              );
-            },
-            childCount: 20,
-          ),
+        return SliverFillRemaining(
+          child: Center(child: Text('Create and view albums here')),
         );
       case 'search':
-        return SliverFixedExtentList(
-          itemExtent: 50.0,
-          delegate: SliverChildBuilderDelegate(
-            (BuildContext context, int index) {
-              return Container(
-                alignment: Alignment.center,
-                color: Colors.lightBlue[100 * (index % 9)],
-                child: Text('list item $index'),
-              );
-            },
-          ),
+        return SliverFillRemaining(
+          child: Center(child: Text('Search things?')),
         );
     }
     return Center(
@@ -76,6 +56,7 @@ class HomeView extends StatelessWidget {
             key: controller.refreshIndicatorKey,
             onRefresh: controller.onPullRefresh,
             child: CustomScrollView(
+              controller: controller.scrollController,
               slivers: <Widget>[
                 SliverAppBar(
                   actions: [

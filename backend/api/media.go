@@ -1,8 +1,10 @@
 package api
 
 import (
+	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/altlimit/dmedia/util"
 	"github.com/gorilla/mux"
@@ -24,7 +26,7 @@ func (s *Server) handleGetAllMedia() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		pages := total / limit
+		pages := int(math.Ceil(float64(total) / float64(limit)))
 		if pages <= 0 {
 			pages = 1
 		}
@@ -41,5 +43,20 @@ func (s *Server) handleGetMedia() http.HandlerFunc {
 			return err
 		}
 		return media
+	})
+}
+
+func (s *Server) handleDeleteMedia() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		u := s.currentUser(r.Context())
+		ids := strings.Split(mux.Vars(r)["id"], "-")
+		var intIds []int64
+		for _, id := range ids {
+			intIds = append(intIds, util.Atoi64(id))
+		}
+		if err := u.DeleteMediaById(intIds); err != nil {
+			return err
+		}
+		return nil
 	})
 }

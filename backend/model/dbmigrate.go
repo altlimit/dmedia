@@ -11,6 +11,7 @@ var (
 			ctype TEXT NOT NULL,
 			created DATETIME NOT NULL,
 			modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			deleted DATETIME,
 			size INTEGER NOT NULL DEFAULT 0,
 			meta JSON
 		);

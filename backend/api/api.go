@@ -113,8 +113,10 @@ func NewServer() *Server {
 
 	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)
 	sr.HandleFunc("/media/{id}", srv.handleGetMedia()).Methods(http.MethodGet)
+	sr.HandleFunc("/media/{id}", srv.handleDeleteMedia()).Methods(http.MethodDelete)
 
 	sr.HandleFunc("/upload", srv.handleUpload()).Methods(http.MethodPost)
+	sr.HandleFunc("/upload/dir", srv.handleUploadDir()).Methods(http.MethodPost)
 
 	dlr := r.PathPrefix("/{user}/{date}/{id}/{file}").Subrouter()
 	dlr.Use(srv.auth)

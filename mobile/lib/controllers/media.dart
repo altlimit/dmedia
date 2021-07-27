@@ -11,7 +11,7 @@ class MediaController extends GetxController {
   final videoPlayers = {}.obs;
   final List<TabElement> tabs = [
     TabElement('Share', Icons.share, 'share'),
-    TabElement('Details', Icons.list, 'details'),
+    // TabElement('Details', Icons.list, 'details'),
     TabElement('Delete', Icons.delete_outline, 'delete'),
   ];
 
@@ -53,6 +53,11 @@ class MediaController extends GetxController {
           headers: media.isVideo ? Util.getClient().headers : null);
       done();
       await Share.shareFiles([file.path]);
+    } else if (tab.key == 'delete') {
+      Util.confirmDialog(Get.context!, () async {
+        Get.find<HomeController>().deleteMedia(index);
+        Get.back();
+      });
     }
   }
 

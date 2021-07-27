@@ -205,8 +205,8 @@ class Media {
       httpHeaders: client.headers,
       imageUrl: getPath(client: client) +
           (size != null ? '?size=' + size.toString() : ''),
-      progressIndicatorBuilder: (context, url, downloadProgress) =>
-          CircularProgressIndicator(value: downloadProgress.progress),
+      // progressIndicatorBuilder: (context, url, downloadProgress) =>
+      //     CircularProgressIndicator(value: downloadProgress.progress),
       errorWidget: (context, url, error) => Icon(Icons.error),
     );
   }
@@ -251,6 +251,15 @@ class DBProvider {
     return _dbs[internalId]!;
   }
 
+  Future<void> deleteMedia(int internalId, List<int> id) async {
+    final db = await open(internalId);
+    final updated = await db.rawUpdate(
+        'UPDATE media SET modified=CURRENT_TIMESTAMP, deleted=CURRENT_TIMESTAMP WHERE id IN (${id.join(',')})');
+    Util.debug('Updated: $updated');
+    final client = await Util.getClient(internalId: Util.getActiveAccountId());
+    await client.request('/api/media/${id.join('-')}', method: 'DELETE');
+  }
+
   Future<void> upsertMedia(int internalId, List<dynamic> rows) async {
     final db = await open(internalId);
     final batch = db.batch();
@@ -267,17 +276,18 @@ class DBProvider {
     final db = await open(internalId);
     final client = await Util.getClient(internalId: Util.getActiveAccountId());
     var rows = await db.rawQuery('SELECT MAX(modified) as lastMod FROM media');
-    var lastMod = rows[0]['lastMod'] == null
-        ? ''
-        : '?mod=' + (rows[0]['lastMod'] as String);
+    final Map<String, String> qs = {};
+    if (rows[0]['lastMod'] != null) qs['mod'] = rows[0]['lastMod'] as String;
     Map<String, dynamic> response =
-        await client.request('/api/media' + lastMod);
+        await client.request('/api/media?' + Uri(queryParameters: qs).query);
     if (response['result'] != null) {
       final pages = response['pages'] as int;
       await upsertMedia(internalId, response['result']);
       if (pages > 1) {
         for (var page = 2; page <= pages; page++) {
-          response = await client.request('/api/media' + lastMod);
+          qs['p'] = page.toString();
+          response = await client
+              .request('/api/media?' + Uri(queryParameters: qs).query);
           if (response['result'] != null)
             await upsertMedia(internalId, response['result']);
         }
@@ -292,6 +302,7 @@ class DBProvider {
     final offset = (limit * page) - limit;
     var rows = await db.rawQuery("""SELECT * 
     FROM media
+    WHERE deleted is NULL
     ORDER BY created DESC
     LIMIT $limit
     OFFSET $offset""");

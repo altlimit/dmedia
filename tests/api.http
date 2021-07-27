@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5454
-@auth = Basic aa:a
+@auth = Basic a:a
 
 ###
 
@@ -39,6 +39,14 @@ Content-Type: application/json
 GET {{baseUrl}}/api/users
 Authorization: {{auth}}
 Content-Type: application/json
+
+###
+
+POST {{baseUrl}}/api/upload/dir
+Authorization: {{auth}}
+Content-Type: application/json
+
+{}
 
 ###
 
@@ -102,6 +110,11 @@ Authorization: {{auth}}
 ###
 
 GET {{baseUrl}}/api/media/2
+Authorization: {{auth}}
+
+###
+
+DELETE {{baseUrl}}/api/media/1-2
 Authorization: {{auth}}
 
 ###

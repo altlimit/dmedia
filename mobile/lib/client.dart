@@ -45,7 +45,10 @@ class Client {
       var uri = Uri.parse(selectedUrl + path);
       if (data != null) {
         if (!isRelease) print('Payload: ' + json.encode(data));
-        var m = method == 'PUT' ? http.put : http.post;
+        var m = http.post;
+        if (method == 'PUT')
+          m = http.put;
+        else if (method == 'DELETE') m = http.delete;
         resp = await m(uri, body: json.encode(data), headers: headers);
       } else {
         resp = await http.get(uri, headers: headers);

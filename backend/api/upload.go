@@ -4,9 +4,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/altlimit/dmedia/model"
+	"github.com/altlimit/dmedia/util"
 )
 
 func (s *Server) handleUpload() http.HandlerFunc {
@@ -74,4 +77,35 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		}
 		return id
 	})
+}
+
+func (s *Server) handleUploadDir() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		ctx := r.Context()
+		uploadDir := filepath.Join(util.DataPath, util.I64toa(s.userID(ctx)), "upload")
+		if util.FileExists(uploadDir) {
+			log.Printf("Found Upload Dir")
+			u := s.currentUser(ctx)
+			files, err := filePathWalkDir(uploadDir)
+			if err != nil {
+				return err
+			}
+			for _, file := range files {
+				id, err := u.AddMediaFromPath(file)
+				log.Printf("AddMedia: %d -> Err: %v -> %s", id, err, file)
+			}
+		}
+		return nil
+	})
+}
+
+func filePathWalkDir(root string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			files = append(files, path)
+		}
+		return nil
+	})
+	return files, err
 }
