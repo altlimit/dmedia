@@ -45,7 +45,10 @@ class MediaController extends GetxController {
   void onTabTapped(int index) async {
     final tab = tabs[index];
     if (tab.key == 'share') {
-      var file = await DefaultCacheManager().getSingleFile(media.getPath());
+      final done = Util.showLoading(Get.context!);
+      var file = await DefaultCacheManager().getSingleFile(media.getPath(),
+          headers: media.isVideo ? Util.getClient().headers : null);
+      done();
       await Share.shareFiles([file.path]);
     }
   }

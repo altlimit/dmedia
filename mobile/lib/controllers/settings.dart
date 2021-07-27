@@ -2,11 +2,9 @@ import 'package:dmedia/controllers/home.dart';
 import 'package:get/get.dart';
 import 'package:dmedia/models.dart';
 import 'package:dmedia/util.dart';
-import 'package:dmedia/preference.dart';
 import 'package:dmedia/background.dart';
 
 class SettingsController extends GetxController {
-  late bool isDarkMode;
   late Rx<AccountSettings> accountSettings;
   final db = DBProvider();
 
@@ -14,7 +12,6 @@ class SettingsController extends GetxController {
   void onInit() {
     super.onInit();
 
-    isDarkMode = Preference.getBool(settingsDarkMode);
     var settings = Util.getAccountSettings();
     accountSettings = settings != null
         ? settings.obs

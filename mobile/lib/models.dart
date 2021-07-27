@@ -192,7 +192,7 @@ class Media {
 
   String getPath({Client? client}) {
     if (client == null) client = Util.getClient();
-    return '${client!.selectedUrl}/${client.account.id}/' +
+    return '${client.selectedUrl}/${client.account.id}/' +
         dateFormat.format(created) +
         '/$id/$name';
   }
@@ -202,7 +202,7 @@ class Media {
     return CachedNetworkImage(
       fit: size != null ? BoxFit.cover : null,
       key: Key('thumb_' + id.toString()),
-      httpHeaders: client!.headers,
+      httpHeaders: client.headers,
       imageUrl: getPath(client: client) +
           (size != null ? '?size=' + size.toString() : ''),
       progressIndicatorBuilder: (context, url, downloadProgress) =>

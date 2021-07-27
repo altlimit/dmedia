@@ -9,7 +9,6 @@ class SettingsView extends StatelessWidget {
     final SettingsController controller = Get.put(SettingsController());
 
     List<Widget> settingsWidgets = [
-      Center(child: const Text('Sync Settings')),
       ListTile(
         title: const Text('Manage Folders'),
         subtitle: const Text('Manage directories to sync'),
