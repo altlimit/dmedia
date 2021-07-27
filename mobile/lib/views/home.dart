@@ -8,11 +8,13 @@ class HomeView extends StatelessWidget {
       case 'gallery':
         return Obx(() => SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4),
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 5.0,
+                  crossAxisSpacing: 5.0),
               delegate: SliverChildBuilderDelegate(
                 (BuildContext context, int index) {
                   final media = controller.loadedMedia[index];
-                  final widget = media.isVideo
+                  final item = media.isVideo
                       ? Stack(children: <Widget>[
                           Container(
                               alignment: Alignment.center,
@@ -22,12 +24,9 @@ class HomeView extends StatelessWidget {
                             child: Icon(Icons.play_circle),
                           )
                         ])
-                      : Container(
-                          alignment: Alignment.center,
-                          child: media.image(size: 256),
-                        );
+                      : media.image(size: 256);
                   return InkWell(
-                    child: widget,
+                    child: Card(child: item),
                     onTap: () => controller.onMediaItemTap(index),
                   );
                 },

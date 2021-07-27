@@ -1,3 +1,4 @@
+import 'package:dmedia/controllers/home.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/material.dart';
@@ -7,8 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:dmedia/util.dart';
 
 class MediaController extends GetxController {
-  late Media media;
-  VideoPlayerController? videoController;
+  final videoPlayers = {}.obs;
   final List<TabElement> tabs = [
     TabElement('Share', Icons.share, 'share'),
     TabElement('Details', Icons.list, 'details'),
@@ -16,29 +16,32 @@ class MediaController extends GetxController {
   ];
 
   @override
-  void onInit() {
-    super.onInit();
-    media = Get.arguments;
-
-    if (media.isVideo) {
-      final client = Util.getClient();
-
-      videoController = VideoPlayerController.network(
-          media.getPath(client: client),
-          httpHeaders: client.headers);
-      // videoController.addListener(() {});
-    }
+  void onClose() {
+    super.onClose();
+    videoPlayers.values.forEach((val) {
+      val.dispose();
+    });
   }
 
-  @override
-  void dispose() {
-    videoController?.dispose();
-    super.dispose();
+  Media get media {
+    return Get.find<HomeController>().selectedMedia;
+  }
+
+  VideoPlayerController get videoController {
+    return videoPlayers[media.id]!;
   }
 
   Future<bool> started() async {
-    await videoController?.initialize();
-    await videoController?.play();
+    if (media.isVideo && !videoPlayers.containsKey(media.id)) {
+      final client = Util.getClient();
+
+      videoPlayers[media.id] = VideoPlayerController.network(
+          media.getPath(client: client),
+          httpHeaders: client.headers);
+      // videoController.addListener(() {});
+      await videoPlayers[media.id]?.initialize();
+    }
+    await videoPlayers[media.id]?.play();
     return true;
   }
 
@@ -51,5 +54,15 @@ class MediaController extends GetxController {
       done();
       await Share.shareFiles([file.path]);
     }
+  }
+
+  onItemSwipe(details) {
+    final hCtrl = Get.find<HomeController>();
+    if (details.primaryVelocity != 0) videoPlayers[media.id]?.pause();
+    if (details.primaryVelocity > 0)
+      hCtrl.prevMedia();
+    else if (details.primaryVelocity < 0) hCtrl.nextMedia();
+
+    // if (details.primaryVelocity != 0) initVideoController();
   }
 }

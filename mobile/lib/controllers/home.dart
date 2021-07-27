@@ -8,6 +8,7 @@ class HomeController extends SuperController {
   final db = DBProvider();
   final tabIndex = 0.obs;
   final loadedMedia = [].obs;
+  final selectedIndex = 0.obs;
   int page = 1;
   int? pages;
   final refreshIndicatorKey = new GlobalKey<RefreshIndicatorState>();
@@ -129,6 +130,23 @@ class HomeController extends SuperController {
   }
 
   onMediaItemTap(int index) {
-    Get.toNamed('/media', arguments: loadedMedia[index]);
+    selectedIndex(index);
+    print('index $index');
+    Get.toNamed('/media');
+  }
+
+  Media get selectedMedia {
+    return loadedMedia[selectedIndex.value];
+  }
+
+  nextMedia() {
+    if (selectedIndex.value < loadedMedia.length - 1)
+      selectedIndex(selectedIndex.value + 1);
+    print('index $selectedIndex');
+  }
+
+  prevMedia() {
+    if (selectedIndex.value > 0) selectedIndex(selectedIndex.value - 1);
+    print('index $selectedIndex');
   }
 }

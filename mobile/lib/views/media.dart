@@ -20,34 +20,45 @@ class MediaView extends StatelessWidget {
                     label: tab.label,
                   ))
               .toList()),
-      body: controller.media.isVideo
-          ? FutureBuilder<bool>(
-              future: controller.started(),
-              builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                if (snapshot.data == true) {
-                  return Stack(
-                    alignment: Alignment.bottomCenter,
-                    children: <Widget>[
-                      Center(
-                          child: AspectRatio(
-                        aspectRatio:
-                            controller.videoController!.value.aspectRatio,
-                        child: VideoPlayer(controller.videoController!),
-                      )),
-                      _ControlsOverlay(controller: controller.videoController!),
-                      VideoProgressIndicator(controller.videoController!,
-                          allowScrubbing: true),
-                    ],
-                  );
-                } else {
-                  return Center(child: CircularProgressIndicator());
-                }
-              },
-            )
-          : Container(
-              alignment: Alignment.center,
-              child: controller.media.image(),
-            ),
+      body: GestureDetector(
+          child: Obx(() => controller.media.isVideo
+              ? FutureBuilder<bool>(
+                  key: Key('media_${controller.media.id}'),
+                  future: controller.started(),
+                  builder:
+                      (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                    if (snapshot.data == true) {
+                      return Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: <Widget>[
+                          Center(
+                              child: AspectRatio(
+                            aspectRatio:
+                                controller.videoController.value.aspectRatio,
+                            child: VideoPlayer(controller.videoController),
+                          )),
+                          _ControlsOverlay(
+                              controller: controller.videoController),
+                          VideoProgressIndicator(controller.videoController,
+                              allowScrubbing: true),
+                        ],
+                      );
+                    } else {
+                      return Center(child: CircularProgressIndicator());
+                    }
+                  },
+                )
+              : Container(
+                  alignment: Alignment.center,
+                  child: InteractiveViewer(
+                    panEnabled: false,
+                    boundaryMargin: EdgeInsets.all(80),
+                    minScale: 1,
+                    maxScale: 2,
+                    child: controller.media.image(),
+                  ),
+                )),
+          onHorizontalDragEnd: controller.onItemSwipe),
     );
   }
 }
