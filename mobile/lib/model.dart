@@ -156,7 +156,7 @@ class Media {
     required this.meta,
   });
 
-  bool isVideo() {
+  bool get isVideo {
     return ctype.startsWith('video/');
   }
 

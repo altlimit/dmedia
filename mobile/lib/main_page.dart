@@ -97,7 +97,7 @@ class MainPageState extends State<MainPage> with Store, WidgetsBindingObserver {
           delegate: SliverChildBuilderDelegate(
             (BuildContext context, int index) {
               final media = _loadedMedia[index];
-              final widget = media.isVideo()
+              final widget = media.isVideo
                   ? Stack(children: <Widget>[
                       Container(
                           alignment: Alignment.center,

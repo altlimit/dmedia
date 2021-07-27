@@ -6,6 +6,7 @@ import 'package:dmedia/views/home.dart';
 import 'package:dmedia/views/account.dart';
 import 'package:dmedia/views/settings.dart';
 import 'package:dmedia/views/settings_folder.dart';
+import 'package:dmedia/views/media.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,7 @@ void main() async {
       GetPage(name: '/account', page: () => AccountView()),
       GetPage(name: '/settings', page: () => SettingsView()),
       GetPage(name: '/settings/folder', page: () => SettingsFolderView()),
+      GetPage(name: '/media', page: () => MediaView()),
     ],
   ));
 }

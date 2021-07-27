@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:dmedia/model.dart';
-import 'package:dmedia/preference.dart';
 import 'package:dmedia/background.dart';
 
 class HomeController extends SuperController {
@@ -30,8 +29,7 @@ class HomeController extends SuperController {
     Bg.on(taskSync, 'message', (d) async {
       var data = d as Map<String, String>;
       if (data.containsKey('message'))
-        Get.rawSnackbar(
-            title: data['message']!, snackPosition: SnackPosition.BOTTOM);
+        Util.showMessage(Get.context!, data['message']!);
       refreshIndicatorKey.currentState?.show();
     });
 
@@ -127,5 +125,9 @@ class HomeController extends SuperController {
 
   void settingsIconOnTap() {
     Get.toNamed('/settings');
+  }
+
+  onMediaItemTap(int index) {
+    Get.toNamed('/media', arguments: loadedMedia[index]);
   }
 }

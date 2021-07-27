@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:dmedia/controllers/home.dart';
-import 'package:dmedia/media_page.dart';
 
 class HomeView extends StatelessWidget {
   Widget getTabWidget(HomeController controller, String tabKey) {
@@ -13,7 +12,7 @@ class HomeView extends StatelessWidget {
               delegate: SliverChildBuilderDelegate(
                 (BuildContext context, int index) {
                   final media = controller.loadedMedia[index];
-                  final widget = media.isVideo()
+                  final widget = media.isVideo
                       ? Stack(children: <Widget>[
                           Container(
                               alignment: Alignment.center,
@@ -29,16 +28,7 @@ class HomeView extends StatelessWidget {
                         );
                   return InkWell(
                     child: widget,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MediaScreen(
-                            media: media,
-                          ),
-                        ),
-                      );
-                    },
+                    onTap: () => controller.onMediaItemTap(index),
                   );
                 },
                 childCount: controller.loadedMedia.length,

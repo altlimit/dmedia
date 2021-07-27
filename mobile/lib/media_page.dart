@@ -29,7 +29,7 @@ class _MediaScreenState extends State<MediaScreen> {
     super.initState();
     _media = widget.media!;
 
-    if (_media.isVideo()) {
+    if (_media.isVideo) {
       final client = Util.getClient();
 
       _controller = VideoPlayerController.network(
@@ -62,7 +62,7 @@ class _MediaScreenState extends State<MediaScreen> {
   @override
   Widget build(BuildContext context) {
     late Widget body;
-    if (_media.isVideo())
+    if (_media.isVideo)
       body = FutureBuilder<bool>(
         future: started(),
         builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
