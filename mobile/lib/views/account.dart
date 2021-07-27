@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:dmedia/model.dart';
+import 'package:dmedia/models.dart';
 import 'package:dmedia/controllers/account.dart';
 import 'dart:convert';
 

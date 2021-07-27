@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dmedia/preference.dart';
-import 'package:dmedia/model.dart';
+import 'package:dmedia/util.dart';
+import 'package:dmedia/models.dart';
 import 'package:get/get.dart';
 import 'package:dmedia/views/home.dart';
 import 'package:dmedia/views/account.dart';
@@ -12,8 +13,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Preference.load();
 
-  // runApp(MyApp(key: Store.myAppStateKey));
   runApp(GetMaterialApp(
+    theme: ThemeData(
+        primarySwatch: Colors.grey,
+        brightness: Preference.getBool(settingsDarkMode)
+            ? Brightness.dark
+            : Brightness.light),
     initialRoute: Util.getActiveAccountId() == 0 ? '/account' : '/home',
     getPages: [
       GetPage(name: '/home', page: () => HomeView()),

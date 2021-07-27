@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:dmedia/model.dart';
+import 'package:dmedia/util.dart';
 import 'package:dmedia/controllers/settings.dart';
-import 'package:dmedia/store.dart';
-import 'package:dmedia/background.dart';
 
 class SettingsView extends StatelessWidget {
   @override

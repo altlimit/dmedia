@@ -1,7 +1,8 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:dmedia/model.dart';
+import 'package:dmedia/models.dart';
 import 'package:dmedia/background.dart';
+import 'package:dmedia/util.dart';
 
 class HomeController extends SuperController {
   final db = DBProvider();

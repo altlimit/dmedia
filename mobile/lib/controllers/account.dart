@@ -1,6 +1,8 @@
 import 'package:dmedia/controllers/home.dart';
 import 'package:get/get.dart';
-import 'package:dmedia/model.dart';
+import 'package:dmedia/models.dart';
+import 'package:dmedia/util.dart';
+import 'package:dmedia/client.dart';
 
 class AccountController extends GetxController {
   final account = Account().obs;

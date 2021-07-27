@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:dmedia/model.dart';
+import 'package:dmedia/util.dart';
 
 class SettingsFolderController extends GetxController {
   late RxList<String> folders;
