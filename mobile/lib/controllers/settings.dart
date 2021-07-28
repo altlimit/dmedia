@@ -6,7 +6,6 @@ import 'package:dmedia/background.dart';
 
 class SettingsController extends GetxController {
   late Rx<AccountSettings> accountSettings;
-  final db = DBProvider();
 
   @override
   void onInit() {
@@ -32,13 +31,6 @@ class SettingsController extends GetxController {
   onRunSyncTap() async {
     await Bg.scheduleTask(Util.getActiveAccountId().toString(), taskSync,
         isOnce: true);
-  }
-
-  onDeleteDbTap() async {
-    Util.confirmDialog(Get.context!, () async {
-      await db.clearDbs(internalId: Util.getActiveAccountId());
-      await Get.find<HomeController>().onPullRefresh();
-    });
   }
 
   onManageFoldersTap() async {

@@ -4,8 +4,7 @@ import 'package:dmedia/models.dart';
 import 'package:dmedia/background.dart';
 import 'package:dmedia/util.dart';
 
-class HomeController extends SuperController {
-  final db = DBProvider();
+class HomeController extends GetxController {
   final tabIndex = 0.obs;
   final loadedMedia = [].obs;
   final selectedIndex = 0.obs;
@@ -14,7 +13,7 @@ class HomeController extends SuperController {
   final refreshIndicatorKey = new GlobalKey<RefreshIndicatorState>();
   final List<TabElement> tabs = [
     TabElement('Gallery', Icons.photo, 'gallery'),
-    TabElement('Albums', Icons.photo_album, 'albums'),
+    // TabElement('Albums', Icons.photo_album, 'albums'),
     TabElement('Trash', Icons.delete_outline, 'trash'),
   ];
   late ScrollController scrollController;
@@ -49,26 +48,6 @@ class HomeController extends SuperController {
     });
   }
 
-  @override
-  void onResumed() async {
-    await db.syncMedia(Util.getActiveAccountId());
-  }
-
-  @override
-  void onDetached() {
-    print('onDetached called');
-  }
-
-  @override
-  void onInactive() {
-    print('onInative called');
-  }
-
-  @override
-  void onPaused() {
-    print('onPaused called');
-  }
-
   Future<void> loadMedia({bool reset = false}) async {
     if (reset) {
       page = 1;
@@ -76,14 +55,10 @@ class HomeController extends SuperController {
       loadedMedia.clear();
     }
     if (pages == null || page <= pages!) {
-      final result = await db.getFilteredMedia(Util.getActiveAccountId(),
-          deleted: tabs[tabIndex.value].key == 'trash',
-          page: page,
-          countPages: pages == null
-              ? (totalPages) {
-                  pages = totalPages;
-                }
-              : null);
+      final result = await Util.getClient().getMediaList(qs: {
+        'p': page.toString(),
+        'deleted': tabs[tabIndex.value].key == 'trash' ? '1' : '0'
+      }, onPages: (foundPages) => pages = foundPages);
       loadedMedia.addAll(result);
       Util.debug('Added ${result.length}');
       page++;
@@ -100,13 +75,12 @@ class HomeController extends SuperController {
   }
 
   deleteMedia() async {
-    await db.deleteMedia(Util.getActiveAccountId(),
-        [(loadedMedia[selectedIndex.value] as Media).id]);
+    await Util.getClient()
+        .deleteMedia([(loadedMedia[selectedIndex.value] as Media).id]);
     loadedMedia.removeAt(selectedIndex.value);
   }
 
   Future<String> onPullRefresh() async {
-    await db.syncMedia(Util.getActiveAccountId());
     await loadMedia(reset: true);
     return Future.value('done');
   }

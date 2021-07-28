@@ -9,10 +9,13 @@ import 'package:dmedia/util.dart';
 
 class MediaController extends GetxController {
   final videoPlayers = {}.obs;
-  final List<TabElement> tabs = [
+  final List<TabElement> defaultTabs = [
     TabElement('Share', Icons.share, 'share'),
-    // TabElement('Details', Icons.list, 'details'),
     TabElement('Delete', Icons.delete_outline, 'delete'),
+  ];
+  final List<TabElement> trashTabs = [
+    TabElement('Restore', Icons.undo, 'restore'),
+    TabElement('Delete Permantly', Icons.delete_outline, 'delete'),
   ];
 
   @override
@@ -21,6 +24,10 @@ class MediaController extends GetxController {
     videoPlayers.values.forEach((val) {
       val.dispose();
     });
+  }
+
+  List<TabElement> get tabs {
+    return media.isDeleted ? trashTabs : defaultTabs;
   }
 
   Media get media {

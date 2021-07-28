@@ -88,6 +88,22 @@ func I64toa(n int64) string {
 	return strconv.FormatInt(n, 10)
 }
 
+func StringsToInt64(vals []string) []int64 {
+	var newVals []int64
+	for _, val := range vals {
+		newVals = append(newVals, Atoi64(val))
+	}
+	return newVals
+}
+
+func Int64ToStrings(vals []int64) []string {
+	var newVals []string
+	for _, val := range vals {
+		newVals = append(newVals, I64toa(val))
+	}
+	return newVals
+}
+
 func TimeFromPath(p string) time.Time {
 	now := time.Now()
 	m := dateTimeRegex.FindStringSubmatch(p)

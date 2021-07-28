@@ -97,12 +97,6 @@ class SettingsView extends StatelessWidget {
             onTap: controller.onRunSyncTap,
           ),
           visible: !controller.accountSettings.value.scheduled)),
-      ListTile(
-        title: const Text('Delete Database'),
-        subtitle: const Text('Forces full sync from server.'),
-        trailing: Icon(Icons.sync),
-        onTap: controller.onDeleteDbTap,
-      ),
     ];
     return Scaffold(
       appBar: AppBar(

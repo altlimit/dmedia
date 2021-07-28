@@ -13,7 +13,7 @@ import (
 func (s *Server) handleGetAllMedia() http.HandlerFunc {
 	return s.handler(func(r *http.Request) interface{} {
 		u := s.currentUser(r.Context())
-		lastModified := s.QueryParam(r, "mod")
+		deleted := s.QueryParam(r, "deleted")
 		page, _ := strconv.Atoi(s.QueryParam(r, "p"))
 		limit, _ := strconv.Atoi(s.QueryParam(r, "l"))
 		if limit <= 0 || limit > 100 {
@@ -22,7 +22,7 @@ func (s *Server) handleGetAllMedia() http.HandlerFunc {
 		if page <= 0 {
 			page = 1
 		}
-		medias, total, err := u.GetAllMedia(lastModified, page, limit)
+		medias, total, err := u.GetAllMedia(deleted == "1", page, limit)
 		if err != nil {
 			return err
 		}

@@ -1,18 +1,13 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart' as wm;
 import 'package:dmedia/util.dart';
 import 'package:dmedia/client.dart';
-import 'package:dmedia/db_migrate.dart';
 
 const bool isRelease = bool.fromEnvironment("dart.vm.product");
 const String settingsDarkMode = 'dark_mode';
@@ -135,22 +130,27 @@ class Media {
   String ctype;
   DateTime created;
   DateTime modified;
+  DateTime? deleted;
   int size;
   dynamic meta;
-  Media({
-    required this.id,
-    required this.name,
-    required this.public,
-    required this.checksum,
-    required this.ctype,
-    required this.created,
-    required this.modified,
-    required this.size,
-    required this.meta,
-  });
+  Media(
+      {required this.id,
+      required this.name,
+      required this.public,
+      required this.checksum,
+      required this.ctype,
+      required this.created,
+      required this.modified,
+      required this.size,
+      required this.meta,
+      this.deleted});
 
   bool get isVideo {
     return ctype.startsWith('video/');
+  }
+
+  bool get isDeleted {
+    return deleted != null;
   }
 
   Map<String, dynamic> toMap() {
@@ -162,6 +162,7 @@ class Media {
       'ctype': ctype,
       'created': Util.dateTimeToString(created),
       'modified': Util.dateTimeToString(modified),
+      'deleted': deleted != null ? Util.dateTimeToString(deleted!) : null,
       'size': size,
       'meta': json.encode(meta),
     };
@@ -176,8 +177,10 @@ class Media {
       ctype: map['ctype'],
       created: Util.StringToDateTime(map['created']),
       modified: Util.StringToDateTime(map['modified']),
+      deleted:
+          map['deleted'] != null ? Util.StringToDateTime(map['deleted']) : null,
       size: map['size'],
-      meta: json.decode(map['meta']),
+      meta: map['meta'],
     );
   }
 
@@ -209,120 +212,5 @@ class Media {
       //     CircularProgressIndicator(value: downloadProgress.progress),
       errorWidget: (context, url, error) => Icon(Icons.error),
     );
-  }
-}
-
-class DBProvider {
-  static final DBProvider _instance = new DBProvider.internal();
-
-  factory DBProvider() => _instance;
-  DBProvider.internal();
-
-  static Map<int, Database> _dbs = {};
-
-  Future<void> clearDbs({int? internalId}) async {
-    final dbPath = await getDatabasesPath();
-    for (final db in _dbs.entries.toList()) {
-      if (internalId == null || internalId == db.key) {
-        db.value.close();
-        _dbs.remove(db.key);
-      }
-    }
-    for (final file in await Directory(dbPath).list().toList()) {
-      if (internalId == null || file.path.endsWith('account_$internalId.db')) {
-        await file.delete();
-      }
-    }
-  }
-
-  Future<Database> open(int internalId) async {
-    if (!_dbs.containsKey(internalId)) {
-      var path = await getDatabasesPath();
-      var dbPath = p.join(path, 'account_$internalId.db');
-      _dbs[internalId] =
-          await openDatabase(dbPath, version: dbMigrations.length,
-              onCreate: (Database db, int version) async {
-        for (var i = 0; i < version; i++) await db.execute(dbMigrations[i]);
-      }, onUpgrade: (Database db, oldVersion, newVersion) async {
-        for (var i = oldVersion; i < newVersion; i++)
-          await db.execute(dbMigrations[i]);
-      });
-    }
-    return _dbs[internalId]!;
-  }
-
-  Future<void> deleteMedia(int internalId, List<int> id) async {
-    final db = await open(internalId);
-    final updated = await db.rawUpdate(
-        'UPDATE media SET modified=CURRENT_TIMESTAMP, deleted=CURRENT_TIMESTAMP WHERE id IN (${id.join(',')})');
-    Util.debug('Updated: $updated');
-    final client = await Util.getClient(internalId: Util.getActiveAccountId());
-    await client.request('/api/media/${id.join('-')}', method: 'DELETE');
-  }
-
-  Future<void> upsertMedia(int internalId, List<dynamic> rows) async {
-    final db = await open(internalId);
-    final batch = db.batch();
-    for (final r in rows) {
-      final row = r as Map<String, dynamic>;
-      row['public'] = row['public'] == true ? 1 : 0;
-      row['meta'] = row['meta'] != null ? json.encode(row['meta']) : null;
-      batch.insert('media', row, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-    await batch.commit();
-  }
-
-  Future<void> syncMedia(int internalId) async {
-    final db = await open(internalId);
-    final client = await Util.getClient(internalId: Util.getActiveAccountId());
-    var rows = await db.rawQuery('SELECT MAX(modified) as lastMod FROM media');
-    final Map<String, String> qs = {};
-    if (rows[0]['lastMod'] != null) qs['mod'] = rows[0]['lastMod'] as String;
-    Map<String, dynamic> response =
-        await client.request('/api/media?' + Uri(queryParameters: qs).query);
-    if (response['result'] != null) {
-      final pages = response['pages'] as int;
-      await upsertMedia(internalId, response['result']);
-      if (pages > 1) {
-        for (var page = 2; page <= pages; page++) {
-          qs['p'] = page.toString();
-          response = await client
-              .request('/api/media?' + Uri(queryParameters: qs).query);
-          if (response['result'] != null)
-            await upsertMedia(internalId, response['result']);
-        }
-      }
-    }
-  }
-
-  Future<List<Media>> getFilteredMedia(int internalId,
-      {bool deleted = false,
-      int page = 1,
-      int limit = 50,
-      Function(int)? countPages}) async {
-    final db = await open(internalId);
-    final List<Media> result = [];
-    final offset = (limit * page) - limit;
-    final deletedCondition = deleted ? 'NOT NULL' : 'NULL';
-    var rows = await db.rawQuery("""SELECT * 
-    FROM media
-    WHERE deleted is $deletedCondition
-    ORDER BY created DESC
-    LIMIT $limit
-    OFFSET $offset""");
-    for (final row in rows) {
-      final media = Media.fromMap(row);
-      result.add(media);
-    }
-    if (countPages != null) {
-      rows = await db.rawQuery('SELECT COUNT(1) FROM media');
-      var pages = (rows[0]['COUNT(1)'] as int) / limit;
-      if (pages <= 0) {
-        pages = 1;
-      }
-      countPages(pages.ceil());
-    }
-
-    return result;
   }
 }

@@ -141,11 +141,8 @@ func NewServer() *Server {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	st := time.Now().UTC()
-	log.Printf("%s %s", r.Method, r.URL.Path)
 	s.router.ServeHTTP(w, r)
-	if tt := time.Since(st).Milliseconds(); tt > 1000 {
-		log.Printf("[SLOW] warning request: %s %s took %d ms", r.Method, r.RequestURI, tt)
-	}
+	log.Printf("%s %s %d ms", r.Method, r.RequestURI, time.Since(st).Milliseconds())
 }
 
 func (s *Server) handler(f func(r *http.Request) interface{}) http.HandlerFunc {
@@ -193,7 +190,7 @@ func (s *Server) writeError(w http.ResponseWriter, err error) bool {
 		code = http.StatusBadRequest
 	} else if err == errAuth {
 		code = http.StatusUnauthorized
-	} else if err == errNotFound {
+	} else if err == errNotFound || err == model.ErrNotFound {
 		code = http.StatusNotFound
 	} else {
 		log.Printf("InternalError: %v", err)

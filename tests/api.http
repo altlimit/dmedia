@@ -114,7 +114,7 @@ Authorization: {{auth}}
 
 ###
 
-DELETE {{baseUrl}}/api/media/1-2
+DELETE {{baseUrl}}/api/media/100
 Authorization: {{auth}}
 
 ###

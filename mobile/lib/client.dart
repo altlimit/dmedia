@@ -111,4 +111,20 @@ class Client {
         ? {'message': data['error']}
         : null;
   }
+
+  Future<List<Media>> getMediaList(
+      {Map<String, String>? qs, Function(int)? onPages}) async {
+    Map<String, dynamic> response = await request(
+        '/api/media?' + (qs != null ? Uri(queryParameters: qs).query : ''));
+    if (response['result'] != null) {
+      if (onPages != null) onPages(response['pages'] as int);
+      final List<dynamic> result = response['result'];
+      return result.map((m) => Media.fromMap(m)).toList();
+    }
+    return [];
+  }
+
+  Future deleteMedia(List<int> id) async {
+    await request('/api/media/${id.join('-')}', method: 'DELETE');
+  }
 }

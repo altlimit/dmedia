@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/altlimit/dmedia/util"
@@ -77,6 +78,11 @@ func (ed *ExifData) Walk(name exif.FieldName, tag *tiff.Tag) error {
 	}
 	ed.Data[string(name)] = tag
 	return nil
+}
+
+func (m *Media) Path(userID int64) string {
+	created := time.Time(m.Created)
+	return filepath.Join(util.DataPath, util.I64toa(userID), created.Format(util.DateFormat), util.I64toa(m.ID), m.Name)
 }
 
 // SetPassword hashes password field with bcrypt
@@ -234,7 +240,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 	return id, nil
 }
 
-func (u *User) GetAllMedia(lastMod string, page int, limit int) ([]*Media, int, error) {
+func (u *User) GetAllMedia(deleted bool, page int, limit int) ([]*Media, int, error) {
 	db, err := getDB(u.ID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("GetAllMedia getDB error: %v", err)
@@ -243,9 +249,10 @@ func (u *User) GetAllMedia(lastMod string, page int, limit int) ([]*Media, int, 
 		where string
 		args  []interface{}
 	)
-	if lastMod != "" {
-		where = "WHERE modified >= ?"
-		args = append(args, lastMod)
+	if deleted {
+		where = "WHERE deleted IS NOT NULL"
+	} else {
+		where = "WHERE deleted IS NULL"
 	}
 	row, err := db.Query(fmt.Sprintf(`
 		SELECT %s
@@ -305,17 +312,72 @@ func (u *User) DeleteMediaById(ids []int64) error {
 	if err != nil {
 		return fmt.Errorf("DeleteMediaById getDB error: %v", err)
 	}
-	var cleanIDs []string
-	for _, id := range ids {
-		cleanIDs = append(cleanIDs, util.I64toa(id))
+	cleanIDs := strings.Join(util.Int64ToStrings(ids), ",")
+	var (
+		delIDs        []int64
+		pathsToDelete []string
+	)
+	row, err := db.Query(fmt.Sprintf(`
+		SELECT %s
+		FROM media
+		WHERE id IN (%s)
+	`, mediaFields, cleanIDs))
+	if err != nil {
+		return fmt.Errorf("DeleteMediaById db.Query error: %v", err)
 	}
+	defer row.Close()
+	rowCtr := 0
+	for row.Next() {
+		m, err := getRowMedia(row)
+		if err != nil {
+			return fmt.Errorf("DeleteMediaById getRowMedia error: %v", err)
+		}
+		if m.Deleted != nil {
+			// permanent
+			delIDs = append(delIDs, m.ID)
+			pathsToDelete = append(pathsToDelete, m.Path(u.ID))
+		}
+		rowCtr++
+	}
+	if rowCtr == 0 {
+		return ErrNotFound
+	}
+
+	if len(delIDs) > 0 {
+		res, err := db.Exec(fmt.Sprintf(`DELETE FROM media
+		WHERE id IN (%s)`, strings.Join(util.Int64ToStrings(delIDs), ",")))
+		if err != nil {
+			return fmt.Errorf("DeleteMediaById db.Exec 2 error %v", err)
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("DeleteMediaById RowsAffected error %v", err)
+		}
+		delFiles := len(pathsToDelete)
+		if int(affected) != delFiles {
+			log.Printf("[WARNING] DeleteMediaById permanent deletion ids didn't match paths: %v -> %v", affected, pathsToDelete)
+		}
+		var wg sync.WaitGroup
+		wg.Add(delFiles)
+		for i := 0; i < delFiles; i++ {
+			go func(p string) {
+				defer wg.Done()
+				dir := filepath.Dir(p)
+				if err := os.RemoveAll(dir); err != nil {
+					log.Printf("[ERROR] os.RemoveAll(%s) -> %v", dir, err)
+				}
+			}(pathsToDelete[i])
+		}
+		wg.Wait()
+	}
+
 	_, err = db.Exec(fmt.Sprintf(`
 		UPDATE media
 		SET 
 			modified=CURRENT_TIMESTAMP,
 			deleted=CURRENT_TIMESTAMP
 		WHERE id IN (%s);
-	`, strings.Join(cleanIDs, ",")))
+	`, cleanIDs))
 	if err != nil {
 		return fmt.Errorf("DeleteMediaById db.Query error: %v", err)
 	}
