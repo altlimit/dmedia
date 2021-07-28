@@ -52,7 +52,7 @@ jobs:
           mkdir build
           mv backend/dmedia-linux-amd64 build/
           mv backend/dmedia-win-amd64.exe build/
-          mv mobile/build/app/outputs/flutter-apk/app-release.apk build/
+          mv mobile/build/app/outputs/flutter-apk/app-release.apk build/dmedia.apk
       - name: Create Release
         uses: actions/github-script@v2
         with:

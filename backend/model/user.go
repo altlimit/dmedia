@@ -178,7 +178,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 	}
 	dp := dataPath(u.ID)
 	tmpDir := filepath.Join(dp, "tmp", util.NewID())
-	if err := os.MkdirAll(tmpDir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return 0, err
 	}
 	pFile := filepath.Join(tmpDir, name)
@@ -227,7 +227,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 		return 0, err
 	}
 	pDir := filepath.Join(dp, created[0:10], util.I64toa(id))
-	if err := os.MkdirAll(pDir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(pDir, 0755); err != nil {
 		return 0, err
 	}
 	if err := os.Rename(pFile, filepath.Join(pDir, name)); err != nil {

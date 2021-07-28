@@ -32,7 +32,7 @@ func dataPath(userID int64) string {
 	dp := util.DataPath
 	u := util.I64toa(userID)
 	dp = filepath.Join(dp, u)
-	os.MkdirAll(dp, os.ModeDir)
+	os.MkdirAll(dp, 0755)
 	return dp
 }
 
