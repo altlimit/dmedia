@@ -28,6 +28,7 @@ var (
 func init() {
 	DataPath = os.Getenv("DATA_PATH")
 	if DataPath == "" {
+		log.Printf("Set DATA_PATH env var to set the location of media storage")
 		DataPath = filepath.Join("..", "data")
 	}
 
