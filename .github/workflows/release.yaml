@@ -11,10 +11,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Build backend
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: '^1.16.3'        
+          go-version: '^1.16.3'
+      - name: Build backend
         working-directory: ./backend
         run: |
           env GOOS=linux GOARCH=amd64 go build -o dmedia-linux-am64
@@ -25,7 +25,7 @@ jobs:
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
-      - name: Build Mobile
+      - name: Build mobile
         working-directory: ./mobile
         run: |
           flutter pub get
