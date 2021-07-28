@@ -17,8 +17,8 @@ jobs:
       - name: Build backend
         working-directory: ./backend
         run: |
-          env GOOS=linux GOARCH=amd64 go build -o dmedia-linux-am64
-          env GOOS=windows GOARCH=amd64 go build -o dmedia-win-am64.exe
+          env GOOS=linux GOARCH=amd64 go build -o dmedia-linux-amd64
+          env GOOS=windows GOARCH=amd64 go build -o dmedia-win-amd64.exe
       - uses: actions/setup-java@v1
         with:
           java-version: '12.x'
@@ -35,7 +35,6 @@ jobs:
           mkdir build
           mv backend/dmedia-linux-amd64 build/
           mv backend/dmedia-win-amd64.exe build/
-          mv mobile/build/app/outputs/bundle/release/app-release.aab build/
           mv mobile/build/app/outputs/flutter-apk/app-release.apk build/
       - name: Create Release
         uses: actions/github-script@v2
