@@ -31,10 +31,7 @@ const (
 )
 
 var (
-	dateFormat      = "2006-01-02"
-	dateTimeFormat  = "2006-01-02 15:04:05"
-	sDateTimeFormat = "2006-01-02T15:04:05.000Z"
-	sBool           = map[bool]int{true: 1, false: 0}
+	sBool = map[bool]int{true: 1, false: 0}
 )
 
 type (
@@ -70,7 +67,7 @@ type (
 )
 
 func (t DateTime) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(dateTimeFormat))
+	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(util.DateTimeFormat))
 	return []byte(stamp), nil
 }
 
@@ -111,11 +108,8 @@ func (u *User) AddMediaFromPath(path string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	fi, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return u.AddMedia(name, cType, content, fi.ModTime().Format(dateTimeFormat))
+	fbDate := util.TimeFromPath(path)
+	return u.AddMedia(name, cType, content, fbDate.Format(util.DateTimeFormat))
 }
 
 // AddMedia adds new media to table
@@ -127,15 +121,18 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 		createdTime time.Time
 		err         error
 	)
+	if len(content) == 0 {
+		return 0, fmt.Errorf("AddMedia: error content is empty")
+	}
 	if fallbackDT != "" {
-		createdTime, err = time.Parse(dateTimeFormat, fallbackDT)
+		createdTime, err = time.Parse(util.DateTimeFormat, fallbackDT)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("AddMedia: error time.Parse %v", err)
 		}
 	} else {
-		createdTime = time.Now()
+		createdTime = util.TimeFromPath(name)
 	}
-	created := createdTime.Format(dateTimeFormat)
+	created := createdTime.Format(util.DateTimeFormat)
 	if strings.Index(cType, "image/") == 0 {
 		// read exif info
 		x, err := exif.Decode(bytes.NewReader(content))
@@ -153,7 +150,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 						if err == nil {
 							t, err := time.Parse("2006:01:02 15:04:05", dts)
 							if err == nil {
-								created = t.Format(dateTimeFormat)
+								created = t.Format(util.DateTimeFormat)
 								break
 							}
 						}
@@ -337,19 +334,19 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &created, &modified, &m.Size, &meta, &deleted); err != nil {
 		return nil, fmt.Errorf("getRowMedia row.Scan error: %v", err)
 	}
-	dt, err := time.Parse(dateTimeFormat, created)
+	dt, err := time.Parse(util.DateTimeFormat, created)
 	if err != nil {
 		return nil, fmt.Errorf("getRowMedia time.Parse error: %v", err)
 	}
 	m.Created = DateTime(dt)
-	dt, err = time.Parse(dateTimeFormat, modified)
+	dt, err = time.Parse(util.DateTimeFormat, modified)
 	if err != nil {
 		return nil, fmt.Errorf("getRowMedia time.Parse 2 error: %v", err)
 	}
 	m.Modified = DateTime(dt)
 	m.Public = public == 1
 	if deleted.Valid && len(deleted.String) > 0 {
-		dt, err = time.Parse(dateTimeFormat, deleted.String)
+		dt, err = time.Parse(util.DateTimeFormat, deleted.String)
 		if err != nil {
 			return nil, fmt.Errorf("getRowMedia time.Parse 3 error: %v", err)
 		}

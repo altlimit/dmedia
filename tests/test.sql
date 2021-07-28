@@ -3,7 +3,7 @@ from media;
 
 ---
 
-select * from media LIMIT 10;
+select * from media ORDER BY modified DESC LIMIT 10;
 
 ---
 
