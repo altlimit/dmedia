@@ -19,6 +19,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/karlseguin/ccache/v2"
 )
 
 const (
@@ -31,6 +32,8 @@ type (
 	Server struct {
 		router   *mux.Router
 		validate *validator.Validate
+
+		Cache *ccache.Cache
 	}
 
 	validationError struct {
@@ -73,6 +76,7 @@ func NewServer() *Server {
 	srv := &Server{
 		router:   r,
 		validate: validator.New(),
+		Cache:    ccache.New(ccache.Configure().MaxSize(500).ItemsToPrune(50)),
 	}
 	// register function to get tag name from json tags.
 	srv.validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -278,22 +282,41 @@ func (s *Server) auth(next http.Handler) http.Handler {
 				s.writeError(w, errAuth)
 				return
 			} else {
-				u, err := model.GetUser(0, user)
-				if err == model.ErrNotFound {
-					s.writeError(w, newValidationErr("username", "invalid"))
-					return
-				}
-				if err != nil {
-					s.writeError(w, err)
-					return
-				}
-				if !u.ValidPassword(pass) {
-					// TODO add exponential backoff
-					s.writeError(w, newValidationErr("password", "invalid"))
-					return
+				var userID int64
+				cKey := user + ":" + pass
+				item := s.Cache.Get(cKey)
+				if item == nil || item.Expired() {
+					u, err := model.GetUser(0, user)
+					if err == model.ErrNotFound {
+						s.writeError(w, newValidationErr("username", "invalid"))
+						return
+					}
+					if err != nil {
+						s.writeError(w, err)
+						return
+					}
+					loginKey := "login:" + user
+					login := s.Cache.Get(loginKey)
+					var attempts int64
+					if login != nil && !login.Expired() {
+						attempts = login.Value().(int64)
+						if attempts >= 5 {
+							s.writeError(w, newValidationErr("message", "account locked for 10 minutes"))
+							return
+						}
+					}
+					if !u.ValidPassword(pass) {
+						s.Cache.Set(loginKey, attempts+1, time.Minute*10)
+						s.writeError(w, newValidationErr("password", "invalid"))
+						return
+					}
+					userID = u.ID
+					s.Cache.Set(cKey, userID, time.Hour*1)
+				} else {
+					userID = item.Value().(int64)
 				}
 				ctx := r.Context()
-				ctx = context.WithValue(ctx, KeyUser, u.ID)
+				ctx = context.WithValue(ctx, KeyUser, userID)
 				r = r.WithContext(ctx)
 			}
 		}
@@ -312,9 +335,11 @@ func (s *Server) userID(ctx context.Context) int64 {
 func (s *Server) currentUser(ctx context.Context) *model.User {
 	userID := s.userID(ctx)
 	if userID > 0 {
-		u, err := model.GetUser(userID, "")
+		item, err := s.Cache.Fetch(fmt.Sprintf("user:%d", userID), time.Hour*1, func() (interface{}, error) {
+			return model.GetUser(userID, "")
+		})
 		if err == nil {
-			return u
+			return item.Value().(*model.User)
 		}
 	}
 	return &model.User{}

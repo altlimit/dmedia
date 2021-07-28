@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/altlimit/dmedia/model"
@@ -83,6 +84,7 @@ func (s *Server) handleSaveUser() http.HandlerFunc {
 		} else {
 			return errAuth
 		}
+		s.Cache.Delete(fmt.Sprintf("user:%d", user.ID))
 		if err := user.Save(); err != nil {
 			return err
 		}

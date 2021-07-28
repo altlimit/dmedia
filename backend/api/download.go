@@ -1,15 +1,17 @@
 package api
 
 import (
+	"bufio"
+	"bytes"
 	"image/jpeg"
 	"io"
-	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/altlimit/dmedia/util"
 	"github.com/gorilla/mux"
@@ -43,26 +45,37 @@ func (s *Server) handleDownload() http.HandlerFunc {
 		size := s.QueryParam(r, "size")
 		p := filepath.Join(util.DataPath, r.URL.Path)
 		if size != "" {
-			cType := mime.TypeByExtension(filepath.Ext(p))
-			log.Printf("ContentType: %s", cType)
-			if strings.Index(cType, "image/") != 0 {
-				np := p + ".jpg"
-				if !util.FileExists(np) {
-					if err := util.Thumbnail(p); err != nil {
-						s.writeError(wr, err)
-						return
+			item, err := s.Cache.Fetch("dl:"+size+":"+r.URL.Path, time.Hour*24, func() (interface{}, error) {
+				cType := mime.TypeByExtension(filepath.Ext(p))
+				if strings.Index(cType, "image/") != 0 {
+					np := p + ".jpg"
+					if !util.FileExists(np) {
+						if err := util.Thumbnail(p); err != nil {
+							return nil, err
+						}
 					}
+					p = np
 				}
-				p = np
-			}
-			sz, err := strconv.Atoi(size)
+				sz, err := strconv.Atoi(size)
+				if err != nil {
+					return nil, err
+				}
+				var b bytes.Buffer
+				br := bufio.NewWriter(&b)
+				if err := resizeImage(br, p, uint(sz)); err != nil {
+					return nil, err
+				}
+				return b.Bytes(), nil
+			})
 			if err != nil {
 				s.writeError(wr, err)
 				return
 			}
-			if err := resizeImage(wr, p, uint(sz)); err != nil {
+			b := item.Value().([]byte)
+			wr.Header().Set("Content-Type", "image/jpeg")
+			wr.Header().Set("Content-Length", strconv.Itoa(len(b)))
+			if _, err := wr.Write(b); err != nil {
 				s.writeError(wr, err)
-				return
 			}
 			return
 		}

@@ -99,7 +99,7 @@ Authorization: {{auth}}
 
 ###
 
-GET {{baseUrl}}/1/2021-07-16/3/test3.mp4?size=300
+GET {{baseUrl}}/1/2021-06-05/276/PXL_20210605_151357883.jpg?size=250
 Authorization: {{auth}}
 
 ###
