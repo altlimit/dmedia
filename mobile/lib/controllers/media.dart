@@ -55,7 +55,7 @@ class MediaController extends GetxController {
       await Share.shareFiles([file.path]);
     } else if (tab.key == 'delete') {
       Util.confirmDialog(Get.context!, () async {
-        Get.find<HomeController>().deleteMedia(index);
+        Get.find<HomeController>().deleteMedia();
         Get.back();
       });
     }

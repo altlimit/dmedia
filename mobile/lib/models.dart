@@ -295,14 +295,18 @@ class DBProvider {
     }
   }
 
-  Future<List<Media>> getRecentMedia(int internalId,
-      {int page = 1, int limit = 50, Function(int)? countPages}) async {
+  Future<List<Media>> getFilteredMedia(int internalId,
+      {bool deleted = false,
+      int page = 1,
+      int limit = 50,
+      Function(int)? countPages}) async {
     final db = await open(internalId);
     final List<Media> result = [];
     final offset = (limit * page) - limit;
+    final deletedCondition = deleted ? 'NOT NULL' : 'NULL';
     var rows = await db.rawQuery("""SELECT * 
     FROM media
-    WHERE deleted is NULL
+    WHERE deleted is $deletedCondition
     ORDER BY created DESC
     LIMIT $limit
     OFFSET $offset""");

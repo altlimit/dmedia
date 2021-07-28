@@ -15,7 +15,7 @@ select * from user;
 
 ---
 
-select strftime('%Y-%m-%d', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified from media;
+select strftime('%Y-%m-%d', NULL) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified from media;
 
 ---
 

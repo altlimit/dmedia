@@ -6,6 +6,7 @@ class HomeView extends StatelessWidget {
   Widget getTabWidget(HomeController controller, String tabKey) {
     switch (tabKey) {
       case 'gallery':
+      case 'trash':
         return Obx(() => SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 4,
@@ -36,10 +37,6 @@ class HomeView extends StatelessWidget {
       case 'albums':
         return SliverFillRemaining(
           child: Center(child: Text('Create and view albums here')),
-        );
-      case 'search':
-        return SliverFillRemaining(
-          child: Center(child: Text('Search things?')),
         );
     }
     return Center(

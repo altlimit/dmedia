@@ -24,7 +24,7 @@ const (
 	mediaFields = `
 		id, name, public, checksum, ctype,
 		strftime('%Y-%m-%d %H:%M:%S', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified, 
-		size, meta`
+		size, meta, strftime('%Y-%m-%d %H:%M:%S', deleted) as deleted`
 	userFields = `
 		id, name, password, admin, active
 	`
@@ -48,15 +48,16 @@ type (
 	}
 
 	Media struct {
-		ID          int64    `json:"id"`
-		Name        string   `json:"name"`
-		Public      bool     `json:"public"`
-		Checksum    string   `json:"checksum"`
-		ContentType string   `json:"ctype"`
-		Created     DateTime `json:"created"`
-		Modified    DateTime `json:"modified"`
-		Size        int      `json:"size"`
-		Meta        *Meta    `json:"meta"`
+		ID          int64     `json:"id"`
+		Name        string    `json:"name"`
+		Public      bool      `json:"public"`
+		Checksum    string    `json:"checksum"`
+		ContentType string    `json:"ctype"`
+		Created     DateTime  `json:"created"`
+		Modified    DateTime  `json:"modified"`
+		Deleted     *DateTime `json:"deleted"`
+		Size        int       `json:"size"`
+		Meta        *Meta     `json:"meta"`
 	}
 
 	Meta struct {
@@ -329,10 +330,11 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 	var (
 		created  string
 		modified string
+		deleted  sql.NullString
 		meta     sql.NullString
 		public   int
 	)
-	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &created, &modified, &m.Size, &meta); err != nil {
+	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &created, &modified, &m.Size, &meta, &deleted); err != nil {
 		return nil, fmt.Errorf("getRowMedia row.Scan error: %v", err)
 	}
 	dt, err := time.Parse(dateTimeFormat, created)
@@ -346,6 +348,14 @@ func getRowMedia(row *sql.Rows) (*Media, error) {
 	}
 	m.Modified = DateTime(dt)
 	m.Public = public == 1
+	if deleted.Valid && len(deleted.String) > 0 {
+		dt, err = time.Parse(dateTimeFormat, deleted.String)
+		if err != nil {
+			return nil, fmt.Errorf("getRowMedia time.Parse 3 error: %v", err)
+		}
+		dd := DateTime(dt)
+		m.Deleted = &dd
+	}
 	if meta.Valid && len(meta.String) > 0 {
 		if err := json.Unmarshal([]byte(meta.String), m.Meta); err != nil {
 			return nil, fmt.Errorf("getRowMedia json.Unmarshal error: %v", err)

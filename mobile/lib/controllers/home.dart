@@ -15,7 +15,7 @@ class HomeController extends SuperController {
   final List<TabElement> tabs = [
     TabElement('Gallery', Icons.photo, 'gallery'),
     TabElement('Albums', Icons.photo_album, 'albums'),
-    TabElement('Search', Icons.search, 'search'),
+    TabElement('Trash', Icons.delete_outline, 'trash'),
   ];
   late ScrollController scrollController;
 
@@ -69,9 +69,15 @@ class HomeController extends SuperController {
     print('onPaused called');
   }
 
-  Future<void> loadMedia() async {
+  Future<void> loadMedia({bool reset = false}) async {
+    if (reset) {
+      page = 1;
+      pages = null;
+      loadedMedia.clear();
+    }
     if (pages == null || page <= pages!) {
-      final result = await db.getRecentMedia(Util.getActiveAccountId(),
+      final result = await db.getFilteredMedia(Util.getActiveAccountId(),
+          deleted: tabs[tabIndex.value].key == 'trash',
           page: page,
           countPages: pages == null
               ? (totalPages) {
@@ -84,26 +90,24 @@ class HomeController extends SuperController {
     }
   }
 
-  void onTabTapped(int index) {
+  void onTabTapped(int index) async {
     tabIndex(index);
+    await loadMedia(reset: true);
   }
 
   reload() {
     refreshIndicatorKey.currentState?.show();
   }
 
-  deleteMedia(int index) async {
-    await db.deleteMedia(
-        Util.getActiveAccountId(), [(loadedMedia[index] as Media).id]);
-    loadedMedia.removeAt(index);
+  deleteMedia() async {
+    await db.deleteMedia(Util.getActiveAccountId(),
+        [(loadedMedia[selectedIndex.value] as Media).id]);
+    loadedMedia.removeAt(selectedIndex.value);
   }
 
   Future<String> onPullRefresh() async {
-    page = 1;
-    pages = null;
-    loadedMedia.clear();
     await db.syncMedia(Util.getActiveAccountId());
-    await loadMedia();
+    await loadMedia(reset: true);
     return Future.value('done');
   }
 

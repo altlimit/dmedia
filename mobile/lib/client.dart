@@ -43,7 +43,7 @@ class Client {
     try {
       await init();
       var uri = Uri.parse(selectedUrl + path);
-      if (data != null) {
+      if (data != null || method != null) {
         if (!isRelease) print('Payload: ' + json.encode(data));
         var m = http.post;
         if (method == 'PUT')
