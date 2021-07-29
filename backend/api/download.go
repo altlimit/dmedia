@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"image/jpeg"
 	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -46,7 +45,7 @@ func (s *Server) handleDownload() http.HandlerFunc {
 		p := filepath.Join(util.DataPath, r.URL.Path)
 		if size != "" {
 			item, err := s.Cache.Fetch("dl:"+size+":"+r.URL.Path, time.Hour*24, func() (interface{}, error) {
-				cType := mime.TypeByExtension(filepath.Ext(p))
+				cType := util.TypeByExt(filepath.Ext(p))
 				if strings.Index(cType, "image/") != 0 {
 					np := p + ".jpg"
 					if !util.FileExists(np) {

@@ -17,6 +17,9 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o dmedia
 
 FROM alpine:3.14 as app
 
+RUN apk update \
+  && apk add --no-cache ffmpeg
+
 WORKDIR /app
 VOLUME [ "/data" ]
 COPY --from=builder /build/dmedia .

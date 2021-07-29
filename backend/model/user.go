@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,7 +108,7 @@ func (u *User) Save() error {
 // AddMediaFromPath adds new media from local path
 func (u *User) AddMediaFromPath(path string) (int64, error) {
 	name := filepath.Base(path)
-	cType := mime.TypeByExtension(filepath.Ext(name))
+	cType := util.TypeByExt(filepath.Ext(name))
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return 0, err
@@ -167,6 +166,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 	} else if strings.Index(cType, "video/") == 0 {
 		isVideo = true
 	} else {
+		log.Printf("Found ContentType: %s", cType)
 		return 0, ErrNotSupported
 	}
 	db, err := getDB(u.ID)

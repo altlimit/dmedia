@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mime"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +16,8 @@ import (
 )
 
 var (
-	DataPath      string
+	DataPath string
+
 	uid           *shortid.Shortid
 	dateRegex     = regexp.MustCompile(`(\d{4})-(\d{2})-(\d{2})`)
 	dateTimeRegex = regexp.MustCompile(`(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})`)
@@ -122,4 +124,11 @@ func TimeFromPath(p string) time.Time {
 		return fi.ModTime()
 	}
 	return now
+}
+
+func TypeByExt(ext string) string {
+	if val, ok := MimeTypes[ext]; ok {
+		return val
+	}
+	return mime.TypeByExtension(ext)
 }
