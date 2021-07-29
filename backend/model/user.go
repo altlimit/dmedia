@@ -258,7 +258,7 @@ func (u *User) GetAllMedia(deleted bool, page int, limit int) ([]*Media, int, er
 		SELECT %s
 		FROM media
 		%s
-		ORDER BY id DESC
+		ORDER BY created DESC
 		LIMIT %d
 		OFFSET %d
 	`, mediaFields, where, limit, (limit*page)-limit), args...)
