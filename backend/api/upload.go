@@ -86,14 +86,17 @@ func (s *Server) handleUploadDir() http.HandlerFunc {
 		if util.FileExists(uploadDir) {
 			log.Printf("Found Upload Dir")
 			u := s.currentUser(ctx)
-			files, err := filePathWalkDir(uploadDir)
-			if err != nil {
-				return err
-			}
-			for _, file := range files {
-				id, err := u.AddMediaFromPath(file)
-				log.Printf("AddMedia: %d -> Err: %v -> %s", id, err, file)
-			}
+			go func() {
+				files, err := filePathWalkDir(uploadDir)
+				if err != nil {
+					log.Printf("Error Walk Dir: %v", err)
+					return
+				}
+				for _, file := range files {
+					id, err := u.AddMediaFromPath(file)
+					log.Printf("AddMedia: %d -> Err: %v -> %s", id, err, file)
+				}
+			}()
 		}
 		return nil
 	})

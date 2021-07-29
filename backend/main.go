@@ -6,9 +6,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/altlimit/dmedia/api"
+	"github.com/altlimit/dmedia/util"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func main() {
@@ -16,6 +19,17 @@ func main() {
 	if port == "" {
 		port = "5454"
 	}
+
+	if os.Getenv("LOGFILE") != "" {
+		log.SetOutput(&lumberjack.Logger{
+			Filename:   filepath.Join(util.DataPath, "logs", "dmedia.log"),
+			MaxSize:    10,
+			MaxBackups: 3,
+			MaxAge:     15,
+			Compress:   true,
+		})
+	}
+
 	srv := &http.Server{
 		Handler:      api.NewServer(),
 		Addr:         fmt.Sprintf(":%s", port),

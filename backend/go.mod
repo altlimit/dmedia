@@ -13,4 +13,5 @@ require (
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )

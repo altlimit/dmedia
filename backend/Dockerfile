@@ -21,4 +21,6 @@ WORKDIR /app
 VOLUME [ "/data" ]
 COPY --from=builder /build/dmedia .
 
+ENV LOGFILE=1
+
 CMD ["/app/dmedia"]
