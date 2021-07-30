@@ -4,7 +4,7 @@ on:
     paths:
       - "mobile/**"
     tags:
-      - 'v*'
+      - 'v*-mobile'
     
 jobs:
   build:
@@ -60,7 +60,7 @@ jobs:
             const release = await github.repos.createRelease({
                 owner, repo,
                 tag_name: releaseName,
-                name: 'Server ' + releaseName,
+                name: 'Mobile ' + releaseName,
                 draft: false,
                 body: stdout,
                 target_commitish: sha

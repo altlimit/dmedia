@@ -4,7 +4,7 @@ on:
     paths:
       - "backend/**"
     tags:
-      - 'v*'
+      - 'v*-server'
     
 jobs:
   build:
