@@ -30,9 +30,9 @@ jobs:
         run: |
           flutter pub get
           echo "${{ secrets.KEY_FILE }}" | base64 --decode > android/app/keyfile.jks
-          echo "flutter.versionName=${GITHUB_REF#refs/*/}" >> android/local.properties
-          echo "flutter.versionCode=${GITHUB_RUN_NUMBER}" >> android/local.properties
-          echo "${{ secrets.LOCAL_PROPERTIES }}" >> android/local.properties
+          echo -e "\nflutter.versionName=${GITHUB_REF#refs/*/}" >> android/local.properties
+          echo -e "\nflutter.versionCode=${GITHUB_RUN_NUMBER}" >> android/local.properties
+          echo -e "\n${{ secrets.LOCAL_PROPERTIES }}" >> android/local.properties
       - name: Build mobile
         working-directory: ./mobile
         run: |
@@ -42,6 +42,7 @@ jobs:
         run: |
           mkdir build
           mv mobile/build/app/outputs/flutter-apk/app-release.apk build/dmedia.apk
+          mv mobile/build/app/outputs/bundle/release/app-release.aab build/dmedia.aab
       - uses: actions/setup-node@v2
         with:
           node-version: 14
@@ -79,5 +80,5 @@ jobs:
         with:
           serviceAccountJson: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
           packageName: org.altlimit.dmedia
-          releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
+          releaseFiles: build/dmedia.aab
           track: production
