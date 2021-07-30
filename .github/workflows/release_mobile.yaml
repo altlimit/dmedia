@@ -25,13 +25,17 @@ jobs:
           find: "signingConfigs.debug"
           replace: "signingConfigs.release"
           include: "mobile/android/app/build.gradle"          
+      - name: Set flutter version
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: "version: 1.0.0+1"
+          replace: "version: ${GITHUB_REF#refs/*/}+${GITHUB_RUN_NUMBER}"
+          include: "mobile/pubspec.yaml"          
       - name: Prepare mobile signing
         working-directory: ./mobile
         run: |
           flutter pub get
           echo "${{ secrets.KEY_FILE }}" | base64 --decode > android/app/keyfile.jks
-          echo -e "\nflutter.versionName=${GITHUB_REF#refs/*/}" >> android/local.properties
-          echo -e "\nflutter.versionCode=${GITHUB_RUN_NUMBER}" >> android/local.properties
           echo -e "\n${{ secrets.LOCAL_PROPERTIES }}" >> android/local.properties
       - name: Build mobile
         working-directory: ./mobile
