@@ -4,7 +4,7 @@ on:
     paths:
       - "mobile/**"
     tags:
-      - 'v*-mobile'
+      - 'v**-mobile'
     
 jobs:
   build:
