@@ -78,7 +78,7 @@ jobs:
       - name: Publish to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJson: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
           packageName: org.altlimit.dmedia
           releaseFiles: build/dmedia.aab
           track: production
