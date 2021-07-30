@@ -1,4 +1,4 @@
-name: Release Backend
+name: Release Mobile
 on:
   push:
     paths:
@@ -19,13 +19,20 @@ jobs:
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
+      - name: Add Signing Release
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: "signingConfigs.debug"
+          replace: "signingConfigs.release"
+          include: "mobile/android/app/build.gradle"          
       - name: Prepare mobile signing
+        working-directory: ./mobile
         run: |
           flutter pub get
-          echo "${{ secrets.KEY_FILE }}" | base64 --decode > mobile/android/app/keyfile.jks
-          echo "flutter.versionName=${GITHUB_REF#refs/*/}" >> mobile/android/local.properties
-          echo "flutter.versionCode=${GITHUB_RUN_NUMBER}" >> mobile/android/local.properties
-          echo "${{ secrets.LOCAL_PROPERTIES }}" >> mobile/android/local.properties
+          echo "${{ secrets.KEY_FILE }}" | base64 --decode > android/app/keyfile.jks
+          echo "flutter.versionName=${GITHUB_REF#refs/*/}" >> android/local.properties
+          echo "flutter.versionCode=${GITHUB_RUN_NUMBER}" >> android/local.properties
+          echo "${{ secrets.LOCAL_PROPERTIES }}" >> android/local.properties
       - name: Build mobile
         working-directory: ./mobile
         run: |
