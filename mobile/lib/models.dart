@@ -1,13 +1,14 @@
 import 'dart:convert';
-import 'package:cached_network_image/cached_network_image.dart';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:workmanager/workmanager.dart' as wm;
-import 'package:dmedia/util.dart';
+
 import 'package:dmedia/client.dart';
+import 'package:dmedia/util.dart';
 
 const bool isRelease = bool.fromEnvironment("dart.vm.product");
 const String settingsDarkMode = 'dark_mode';
@@ -16,6 +17,7 @@ const String settingsAccount = 'account';
 const String settingsAccountSettings = 'account_settings';
 const String settingsIdCounter = 'id_ctr';
 const String taskSync = 'sync';
+const String taskDelete = 'delete';
 
 final dateTimeFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
 final dateFormat = DateFormat("yyyy-MM-dd");
@@ -70,17 +72,20 @@ class AccountSettings {
   bool idle;
   bool notify;
   bool scheduled;
+  bool delete;
+  int? lastSync;
   List<String> folders;
 
-  AccountSettings({
-    required this.duration,
-    required this.wifiEnabled,
-    required this.charging,
-    required this.idle,
-    required this.notify,
-    required this.scheduled,
-    required this.folders,
-  });
+  AccountSettings(
+      {required this.duration,
+      required this.wifiEnabled,
+      required this.charging,
+      required this.idle,
+      required this.notify,
+      required this.delete,
+      required this.scheduled,
+      required this.folders,
+      this.lastSync});
 
   wm.Constraints getConstraints() {
     return wm.Constraints(
@@ -100,6 +105,8 @@ class AccountSettings {
       'idle': idle,
       'notify': notify,
       'scheduled': scheduled,
+      'delete': delete,
+      'lastSync': lastSync,
       'folders': folders,
     };
   }
@@ -112,6 +119,8 @@ class AccountSettings {
       idle: map['idle'],
       notify: map['notify'],
       scheduled: map['scheduled'],
+      delete: map['delete'],
+      lastSync: map['lastSync'],
       folders: List<String>.from(map['folders']),
     );
   }
@@ -208,8 +217,10 @@ class Media {
       httpHeaders: client.headers,
       imageUrl: getPath(client: client) +
           (size != null ? '?size=' + size.toString() : ''),
-      // progressIndicatorBuilder: (context, url, downloadProgress) =>
-      //     CircularProgressIndicator(value: downloadProgress.progress),
+      progressIndicatorBuilder: size != null
+          ? null
+          : (context, url, downloadProgress) =>
+              CircularProgressIndicator(value: downloadProgress.progress),
       errorWidget: (context, url, error) => Icon(Icons.error),
     );
   }

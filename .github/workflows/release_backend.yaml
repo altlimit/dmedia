@@ -1,17 +1,17 @@
-name: Create Release
+name: Release Backend
 on:
   push:
+    paths:
+      - "backend/**"
     tags:
       - 'v*'
     
 jobs:
   build:
-    name: Create Release
+    name: Create Backend Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Checkout
         uses: actions/checkout@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -36,44 +36,35 @@ jobs:
         run: |
           env GOOS=linux GOARCH=amd64 go build -o dmedia-linux-amd64
           env GOOS=windows GOARCH=amd64 go build -o dmedia-win-amd64.exe
-      - uses: actions/setup-java@v1
-        with:
-          java-version: '12.x'
-      - uses: subosito/flutter-action@v1
-        with:
-          channel: 'stable'
-      - name: Build mobile
-        working-directory: ./mobile
-        run: |
-          flutter pub get
-          flutter build apk --release
       - name: Prepare builds
         run: |
           mkdir build
           mv backend/dmedia-linux-amd64 build/
           mv backend/dmedia-win-amd64.exe build/
-          mv mobile/build/app/outputs/flutter-apk/app-release.apk build/dmedia.apk
-      - name: Create Release
-        uses: actions/github-script@v2
+          export "GIT_TAG_MSG=`echo $(git tag -l --format='%(contents:subject)' v0.0.2)`"
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+      - name: Install npm deps
+        run: npm install execa
+      - name: Create Backend Release
+        uses: actions/github-script@v4
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            console.log('environment', process.versions);
-            
+          script: |                        
             const fs = require('fs').promises;
-            
+            const execa = require('execa');            
             const { repo: { owner, repo }, sha } = context;
-            console.log({ owner, repo, sha });
             const releaseName = process.env.GITHUB_REF.split('/').pop();
+            const { stdout } = await execa('git', ['tag', '-l', "--format=%(contents:subject)", releaseName]);
             const release = await github.repos.createRelease({
                 owner, repo,
                 tag_name: releaseName,
-                release_name: 'Release ' + releaseName,
+                name: 'Server ' + releaseName,
                 draft: false,
-                body: await fs.readFile('RELEASE.md', 'utf8'),
+                body: stdout,
                 target_commitish: sha
             });
-            console.log('created release', { release });        
             for (let file of await fs.readdir('./build')) {
                 console.log('uploading', file);
                 await github.repos.uploadReleaseAsset({

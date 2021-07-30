@@ -1,0 +1,76 @@
+name: Release Backend
+on:
+  push:
+    paths:
+      - "mobile/**"
+    tags:
+      - 'v*'
+    
+jobs:
+  build:
+    name: Create Mobile Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '12.x'
+      - uses: subosito/flutter-action@v1
+        with:
+          channel: 'stable'
+      - name: Prepare mobile signing
+        run: |
+          flutter pub get
+          echo "${{ secrets.KEY_FILE }}" | base64 --decode > mobile/android/app/keyfile.jks
+          echo "flutter.versionName=${GITHUB_REF#refs/*/}" >> mobile/android/local.properties
+          echo "flutter.versionCode=${GITHUB_RUN_NUMBER}" >> mobile/android/local.properties
+          echo "${{ secrets.LOCAL_PROPERTIES }}" >> mobile/android/local.properties
+      - name: Build mobile
+        working-directory: ./mobile
+        run: |
+          flutter build apk --release
+          flutter build appbundle
+      - name: Prepare builds
+        run: |
+          mkdir build
+          mv mobile/build/app/outputs/flutter-apk/app-release.apk build/dmedia.apk
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+      - name: Install npm deps
+        run: npm install execa
+      - name: Create Mobile Release
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |                        
+            const fs = require('fs').promises;
+            const execa = require('execa');            
+            const { repo: { owner, repo }, sha } = context;
+            const releaseName = process.env.GITHUB_REF.split('/').pop();
+            const { stdout } = await execa('git', ['tag', '-l', "--format=%(contents:subject)", releaseName]);
+            const release = await github.repos.createRelease({
+                owner, repo,
+                tag_name: releaseName,
+                name: 'Server ' + releaseName,
+                draft: false,
+                body: stdout,
+                target_commitish: sha
+            });
+            for (let file of await fs.readdir('./build')) {
+                console.log('uploading', file);
+                await github.repos.uploadReleaseAsset({
+                    owner, repo,
+                    release_id: release.data.id,
+                    name: file,
+                    data: await fs.readFile(`./build/${file}`)
+                });            
+            }
+      - name: Publish to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          packageName: org.altlimit.dmedia
+          releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
+          track: production

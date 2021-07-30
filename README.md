@@ -16,3 +16,10 @@ Then intall the mobile app from google play or from the release page.
 You need to put the server behind a proxy to enable https, you can also directly use the local port for home only back up.
 
 More details coming soon.
+
+Updating launcher icon
+---
+```bash
+flutter pub get
+flutter pub run flutter_launcher_icons:main
+```

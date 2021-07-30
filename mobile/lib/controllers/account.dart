@@ -1,3 +1,4 @@
+import 'package:dmedia/background.dart';
 import 'package:dmedia/controllers/home.dart';
 import 'package:get/get.dart';
 import 'package:dmedia/models.dart';
@@ -97,9 +98,10 @@ class AccountController extends GetxController {
   }
 
   onDeleteAccountTap() {
-    Util.confirmDialog(Get.context!, () {
+    Util.confirmDialog(Get.context!, () async {
       Util.delAccount(internalId!);
       Util.delAccountSettings(internalId!);
+      await Bg.cancelTask(internalId!.toString());
       Get.back();
     });
   }

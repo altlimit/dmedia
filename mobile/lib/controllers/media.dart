@@ -15,7 +15,7 @@ class MediaController extends GetxController {
   ];
   final List<TabElement> trashTabs = [
     TabElement('Restore', Icons.undo, 'restore'),
-    TabElement('Delete Permantly', Icons.delete_outline, 'delete'),
+    TabElement('Delete Permanently', Icons.delete_outline, 'delete'),
   ];
 
   @override

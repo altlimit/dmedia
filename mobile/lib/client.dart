@@ -28,7 +28,7 @@ class Client {
         if (selectedUrl.length == 0) {
           var resp = await http
               .get(Uri.parse(urls[i] + '/status'))
-              .timeout(Duration(seconds: 1));
+              .timeout(Duration(seconds: 5));
           if (resp.statusCode == 200) {
             selectedUrl = urls[i];
             break;
