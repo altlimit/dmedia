@@ -1,13 +1,19 @@
+import 'dart:io';
+
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:dmedia/models.dart';
 import 'package:dmedia/background.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:dmedia/util.dart';
 
 class HomeController extends GetxController {
   final tabIndex = 0.obs;
   final loadedMedia = [].obs;
   final selectedIndex = 0.obs;
+  final selectedIndexes = {}.obs;
+  final multiSelect = false.obs;
   int page = 1;
   int? pages;
   final refreshIndicatorKey = new GlobalKey<RefreshIndicatorState>();
@@ -48,6 +54,10 @@ class HomeController extends GetxController {
     });
   }
 
+  TabElement get currentTab {
+    return tabs[tabIndex.value];
+  }
+
   Future<void> loadMedia({bool reset = false}) async {
     if (reset) {
       page = 1;
@@ -68,6 +78,8 @@ class HomeController extends GetxController {
   void onTabTapped(int index) async {
     tabIndex(index);
     await loadMedia(reset: true);
+    multiSelect(false);
+    selectedIndexes.clear();
   }
 
   reload() {
@@ -75,9 +87,29 @@ class HomeController extends GetxController {
   }
 
   deleteMedia() async {
+    List<int> indexes = multiSelect.value
+        ? selectedIndexes.keys.map((k) => k as int).toList()
+        : [selectedIndex.value];
     await Util.getClient()
-        .deleteMedia([(loadedMedia[selectedIndex.value] as Media).id]);
-    loadedMedia.removeAt(selectedIndex.value);
+        .deleteMedia(indexes.map((i) => (loadedMedia[i] as Media).id).toList());
+    indexes.forEach((i) {
+      loadedMedia.removeAt(i);
+    });
+    multiSelect(false);
+    selectedIndexes.clear();
+  }
+
+  restoreMedia() async {
+    List<int> indexes = multiSelect.value
+        ? selectedIndexes.keys.map((k) => k as int).toList()
+        : [selectedIndex.value];
+    await Util.getClient().restoreMedia(
+        indexes.map((i) => (loadedMedia[i] as Media).id).toList());
+    indexes.forEach((i) {
+      loadedMedia.removeAt(i);
+    });
+    multiSelect(false);
+    selectedIndexes.clear();
   }
 
   Future<String> onPullRefresh() async {
@@ -118,14 +150,64 @@ class HomeController extends GetxController {
     });
   }
 
+  Future shareSelectedTap() async {
+    final done = Util.showLoading(Get.context!);
+    final cm = DefaultCacheManager();
+    final headers = Util.getClient().headers;
+    final files =
+        await Future.wait<File>(selectedIndexes.keys.map((index) async {
+      final media = loadedMedia[index];
+      final mp = media.getPath();
+      return cm.getSingleFile(mp, headers: media.isVideo ? headers : null);
+    }));
+    done();
+    await Share.shareFiles(files.map((file) => file.path).toList());
+    multiSelect(false);
+    selectedIndexes.clear();
+  }
+
+  deleteSelectedTap() {
+    Util.confirmDialog(Get.context!, () {
+      deleteMedia();
+    }, message: 'Delete all selected media?');
+  }
+
+  restoreSelectedTap() {
+    Util.confirmDialog(Get.context!, () {
+      restoreMedia();
+    }, message: 'Restore all selected media?');
+  }
+
   void settingsIconOnTap() {
     Get.toNamed('/settings');
   }
 
   onMediaItemTap(int index) {
+    if (multiSelect.value) {
+      toggleSelected(index);
+      return;
+    }
     selectedIndex(index);
-    print('index $index');
     Get.toNamed('/media');
+  }
+
+  onMediaLongPress(int index) {
+    multiSelect(true);
+    toggleSelected(index);
+
+    Util.debug('MultiSelect: $multiSelect');
+  }
+
+  toggleSelected(int index) {
+    if (selectedIndexes.containsKey(index))
+      selectedIndexes.remove(index);
+    else
+      selectedIndexes.addAll({index: true});
+    if (selectedIndexes.length == 0 && multiSelect.value) multiSelect(false);
+  }
+
+  bool isSelected(int index) {
+    return selectedIndexes.containsKey(index);
   }
 
   Media get selectedMedia {

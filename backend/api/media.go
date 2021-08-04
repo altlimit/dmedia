@@ -46,6 +46,21 @@ func (s *Server) handleGetMedia() http.HandlerFunc {
 	})
 }
 
+func (s *Server) handleRestoreMedia() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		u := s.currentUser(r.Context())
+		ids := strings.Split(mux.Vars(r)["id"], "-")
+		var intIds []int64
+		for _, id := range ids {
+			intIds = append(intIds, util.Atoi64(id))
+		}
+		if err := u.RestoreMediaById(intIds); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 func (s *Server) handleDeleteMedia() http.HandlerFunc {
 	return s.handler(func(r *http.Request) interface{} {
 		u := s.currentUser(r.Context())

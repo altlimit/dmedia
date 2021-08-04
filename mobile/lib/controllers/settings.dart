@@ -44,6 +44,12 @@ class SettingsController extends GetxController {
         isOnce: true, input: {'accountId': Util.getActiveAccountId()});
   }
 
+  onLocalUpload() {
+    Util.confirmDialog(Get.context!, () async {
+      await Util.getClient().request('/api/upload/dir', data: {});
+    }, message: 'Upload media in upload folder?');
+  }
+
   scheduleSync(bool enabled) async {
     if (enabled)
       await Bg.scheduleTask(Util.getActiveAccountId().toString(), taskSync,

@@ -3,84 +3,114 @@ import 'package:get/get.dart';
 import 'package:dmedia/controllers/home.dart';
 
 class HomeView extends StatelessWidget {
-  Widget getTabWidget(HomeController controller, String tabKey) {
-    switch (tabKey) {
-      case 'gallery':
-      case 'trash':
-        return Obx(() => SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 5.0,
-                  crossAxisSpacing: 5.0),
-              delegate: SliverChildBuilderDelegate(
-                (BuildContext context, int index) {
-                  final media = controller.loadedMedia[index];
-                  final item = media.isVideo
-                      ? Stack(children: <Widget>[
-                          Container(
-                              alignment: Alignment.center,
-                              child: media.image(size: 256)),
-                          Align(
-                            alignment: Alignment.center,
-                            child: Icon(Icons.play_circle),
-                          )
-                        ])
-                      : media.image(size: 256);
-                  return InkWell(
-                    child: Card(child: item),
-                    onTap: () => controller.onMediaItemTap(index),
-                  );
-                },
-                childCount: controller.loadedMedia.length,
-              ),
-            ));
-      case 'albums':
-        return SliverFillRemaining(
-          child: Center(child: Text('Create and view albums here')),
-        );
-    }
-    return Center(
-      child: Text('Tab Key: $tabKey not implemented'),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final HomeController controller = Get.put(HomeController());
+    final c = Get.put(HomeController());
 
     return Scaffold(
         body: RefreshIndicator(
-            key: controller.refreshIndicatorKey,
-            onRefresh: controller.onPullRefresh,
+            key: c.refreshIndicatorKey,
+            onRefresh: c.onPullRefresh,
             child: CustomScrollView(
-              controller: controller.scrollController,
+              controller: c.scrollController,
               slivers: <Widget>[
-                SliverAppBar(
-                  actions: [
-                    IconButton(
-                      icon: Icon(Icons.account_circle),
-                      onPressed: controller.accountIconTap,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.settings),
-                      onPressed: controller.settingsIconOnTap,
-                    )
-                  ],
-                  leading: Obx(() =>
-                      Icon(controller.tabs[controller.tabIndex.value].icon)),
-                  floating: true,
-                  flexibleSpace: FlexibleSpaceBar(
-                      title: Obx(() => Text(
-                          controller.tabs[controller.tabIndex.value].label))),
-                ),
-                Obx(() => getTabWidget(
-                    controller, controller.tabs[controller.tabIndex.value].key))
+                Obx(() => SliverAppBar(
+                      actions: [
+                        if (c.multiSelect.value) ...[
+                          if (c.currentTab.key == 'trash')
+                            IconButton(
+                              icon: Icon(Icons.undo),
+                              onPressed: c.restoreSelectedTap,
+                            ),
+                          if (c.currentTab.key == 'gallery')
+                            IconButton(
+                              icon: Icon(Icons.share),
+                              onPressed: c.shareSelectedTap,
+                            ),
+                          IconButton(
+                            icon: Icon(Icons.delete_outline),
+                            onPressed: c.deleteSelectedTap,
+                          )
+                        ],
+                        IconButton(
+                          icon: Icon(Icons.account_circle),
+                          onPressed: c.accountIconTap,
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.settings),
+                          onPressed: c.settingsIconOnTap,
+                        )
+                      ],
+                      leading: Obx(() => Icon(c.currentTab.icon)),
+                      floating: true,
+                      flexibleSpace: FlexibleSpaceBar(
+                          title: Obx(() => Text(c.currentTab.label))),
+                    )),
+                Obx(() {
+                  switch (c.currentTab.key) {
+                    case 'gallery':
+                    case 'trash':
+                      return SliverGrid(
+                        // todo this shouldn't be necessary but this works for now
+                        key: Key('grid_${c.selectedIndexes.length}'),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                mainAxisSpacing: 5.0,
+                                crossAxisSpacing: 5.0),
+                        delegate: SliverChildBuilderDelegate(
+                          (BuildContext context, int index) {
+                            final media = c.loadedMedia[index];
+                            var item = media.isVideo
+                                ? Stack(children: <Widget>[
+                                    Container(
+                                        alignment: Alignment.center,
+                                        child: media.image(size: 256)),
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Icon(Icons.play_circle),
+                                    )
+                                  ])
+                                : media.image(size: 256);
+                            if (c.multiSelect.value && c.isSelected(index))
+                              item = Stack(children: [
+                                Padding(
+                                    padding: EdgeInsets.only(left: 5, right: 5),
+                                    child: Container(
+                                      child: item,
+                                      alignment: Alignment.center,
+                                    )),
+                                Padding(
+                                  padding: EdgeInsets.all(5),
+                                  child: Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Icon(Icons.check_circle),
+                                  ),
+                                )
+                              ]);
+                            return InkWell(
+                              child: Card(child: item),
+                              onTap: () => c.onMediaItemTap(index),
+                              onLongPress: () => c.onMediaLongPress(index),
+                            );
+                          },
+                          childCount: c.loadedMedia.length,
+                        ),
+                      );
+                    case 'albums':
+                      return SliverFillRemaining(
+                        child:
+                            Center(child: Text('Create and view albums here')),
+                      );
+                  }
+                  return Center(child: const Text('...'));
+                })
               ],
             )),
         bottomNavigationBar: Obx(() => BottomNavigationBar(
-            onTap: controller.onTabTapped,
-            currentIndex: controller.tabIndex.value,
-            items: controller.tabs
+            onTap: c.onTabTapped,
+            currentIndex: c.tabIndex.value,
+            items: c.tabs
                 .map((tab) => BottomNavigationBarItem(
                       icon: Icon(tab.icon),
                       label: tab.label,

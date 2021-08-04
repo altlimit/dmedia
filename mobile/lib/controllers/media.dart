@@ -56,13 +56,19 @@ class MediaController extends GetxController {
     final tab = tabs[index];
     if (tab.key == 'share') {
       final done = Util.showLoading(Get.context!);
-      var file = await DefaultCacheManager().getSingleFile(media.getPath(),
+      final mp = media.getPath();
+      var file = await DefaultCacheManager().getSingleFile(mp,
           headers: media.isVideo ? Util.getClient().headers : null);
       done();
       await Share.shareFiles([file.path]);
     } else if (tab.key == 'delete') {
       Util.confirmDialog(Get.context!, () async {
         Get.find<HomeController>().deleteMedia();
+        Get.back();
+      });
+    } else if (tab.key == 'restore') {
+      Util.confirmDialog(Get.context!, () async {
+        Get.find<HomeController>().restoreMedia();
         Get.back();
       });
     }

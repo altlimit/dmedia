@@ -307,6 +307,25 @@ func (u *User) GetMediaByID(id int64) (*Media, error) {
 	return nil, ErrNotFound
 }
 
+func (u *User) RestoreMediaById(ids []int64) error {
+	db, err := getDB(u.ID)
+	if err != nil {
+		return fmt.Errorf("RestoreMediaById getDB error: %v", err)
+	}
+	cleanIDs := strings.Join(util.Int64ToStrings(ids), ",")
+	_, err = db.Exec(fmt.Sprintf(`
+		UPDATE media
+		SET 
+			modified=CURRENT_TIMESTAMP,
+			deleted=NULL
+		WHERE id IN (%s);
+	`, cleanIDs))
+	if err != nil {
+		return fmt.Errorf("RestoreMediaById db.Query error: %v", err)
+	}
+	return nil
+}
+
 func (u *User) DeleteMediaById(ids []int64) error {
 	db, err := getDB(u.ID)
 	if err != nil {

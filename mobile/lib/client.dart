@@ -48,6 +48,8 @@ class Client {
         var m = http.post;
         if (method == 'PUT')
           m = http.put;
+        else if (method == 'PATCH')
+          m = http.patch;
         else if (method == 'DELETE') m = http.delete;
         resp = await m(uri, body: json.encode(data), headers: headers);
       } else {
@@ -126,5 +128,9 @@ class Client {
 
   Future deleteMedia(List<int> id) async {
     await request('/api/media/${id.join('-')}', method: 'DELETE');
+  }
+
+  Future restoreMedia(List<int> id) async {
+    await request('/api/media/${id.join('-')}/restore', method: 'PATCH');
   }
 }

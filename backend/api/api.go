@@ -118,6 +118,7 @@ func NewServer() *Server {
 	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)
 	sr.HandleFunc("/media/{id}", srv.handleGetMedia()).Methods(http.MethodGet)
 	sr.HandleFunc("/media/{id}", srv.handleDeleteMedia()).Methods(http.MethodDelete)
+	sr.HandleFunc("/media/{id}/restore", srv.handleRestoreMedia()).Methods(http.MethodPatch)
 
 	sr.HandleFunc("/upload", srv.handleUpload()).Methods(http.MethodPost)
 	sr.HandleFunc("/upload/dir", srv.handleUploadDir()).Methods(http.MethodPost)
