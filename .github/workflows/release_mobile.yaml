@@ -21,7 +21,7 @@ jobs:
           channel: 'stable'
       - name: Extract tag name
         id: tag
-        uses: actions/github-script@0.2.0
+        uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -36,7 +36,7 @@ jobs:
         uses: jacobtomlinson/gha-find-replace@master
         with:
           find: "version: 1\\.0\\.0\\+1"
-          replace: "version: ${{ steps.tag.outputs.result }}+${{ github.run_number }}"
+          replace: "version: ${{ fromJSON(steps.tag.outputs.result) }}+${{ github.run_number }}"
           include: "mobile/pubspec.yaml"
       - name: Prepare mobile signing
         working-directory: ./mobile
