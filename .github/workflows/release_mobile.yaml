@@ -19,6 +19,13 @@ jobs:
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
+      - name: Extract tag name
+        id: tag
+        uses: actions/github-script@0.2.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            return context.payload.ref.replace(/\/refs\/tags\/v/, '').replace(/-mobile/, '');
       - name: Add Signing Release
         uses: jacobtomlinson/gha-find-replace@master
         with:
@@ -29,7 +36,7 @@ jobs:
         uses: jacobtomlinson/gha-find-replace@master
         with:
           find: "version: 1\\.0\\.0\\+1"
-          replace: "version: ${{ github.ref#refs/*/ }}+${{ github.run_number }}"
+          replace: "version: ${{ steps.tag.outputs.result }}+${{ github.run_number }}"
           include: "mobile/pubspec.yaml"
       - name: Prepare mobile signing
         working-directory: ./mobile
