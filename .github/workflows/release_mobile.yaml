@@ -22,15 +22,15 @@ jobs:
       - name: Add Signing Release
         uses: jacobtomlinson/gha-find-replace@master
         with:
-          find: "signingConfigs.debug"
+          find: "signingConfigs\\.debug"
           replace: "signingConfigs.release"
           include: "mobile/android/app/build.gradle"          
       - name: Set flutter version
         uses: jacobtomlinson/gha-find-replace@master
         with:
-          find: "version: 1.0.0+1"
+          find: "version: 1\\.0\\.0\\+1"
           replace: "version: ${GITHUB_REF#refs/*/}+${GITHUB_RUN_NUMBER}"
-          include: "mobile/pubspec.yaml"          
+          include: "mobile/pubspec.yaml"
       - name: Prepare mobile signing
         working-directory: ./mobile
         run: |
