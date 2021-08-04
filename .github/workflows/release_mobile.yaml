@@ -25,7 +25,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            return context.payload.ref.replace(/\/refs\/tags\/v/, '').replace(/-mobile/, '');
+            return context.payload.ref.split('/v').pop().replace(/-mobile/, '');
       - name: Add Signing Release
         uses: jacobtomlinson/gha-find-replace@master
         with:
