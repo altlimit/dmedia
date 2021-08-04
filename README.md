@@ -15,11 +15,40 @@ Then intall the mobile app from google play or from the release page.
 
 You need to put the server behind a proxy to enable https, you can also directly use the local port for home only back up.
 
-More details coming soon.
+Docker
+---
+
+Create a start_dmedia.sh file and add the contents below then run it. Mount a local directory to /data for all stored media, db and log files.
+
+```bash
+#!/bin/sh
+docker stop dmedia
+docker rm dmedia
+docker pull altlimit/dmedia
+docker create \
+  --name=dmedia \
+  -u 1000:1000 \
+  -p 5454:5454 \
+  -v /mnt/hd1/media:/data \
+  --restart unless-stopped \
+  altlimit/dmedia
+docker start dmedia
+```
 
 Updating launcher icon
 ---
 ```bash
 flutter pub get
 flutter pub run flutter_launcher_icons:main
+```
+
+Release new versions
+---
+```bash
+# Mobile
+git tag -a "v0.x.x-mobile" -m "message"
+# Server
+git tag -a "v0.x.x-server" -m "message"
+# deploy
+git push origin --tags
 ```

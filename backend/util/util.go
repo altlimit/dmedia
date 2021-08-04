@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/teris-io/shortid"
@@ -127,6 +128,7 @@ func TimeFromPath(p string) time.Time {
 }
 
 func TypeByExt(ext string) string {
+	ext = strings.ToLower(ext)
 	if val, ok := MimeTypes[ext]; ok {
 		return val
 	}
