@@ -78,6 +78,10 @@ func (s *Server) handleDownload() http.HandlerFunc {
 			}
 			return
 		}
+		ext := strings.ToLower(filepath.Ext(p))
+		if cType, ok := util.MimeTypes[ext]; ok {
+			wr.Header().Set("Content-Type", cType)
+		}
 		fs.ServeHTTP(wr, r)
 	}
 }

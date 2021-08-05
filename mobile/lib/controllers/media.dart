@@ -1,9 +1,10 @@
+import 'dart:io';
+
 import 'package:dmedia/controllers/home.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:dmedia/models.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:dmedia/util.dart';
 
@@ -42,9 +43,10 @@ class MediaController extends GetxController {
     if (media.isVideo && !videoPlayers.containsKey(media.id)) {
       final client = Util.getClient();
 
-      videoPlayers[media.id] = VideoPlayerController.network(
-          media.getPath(client: client),
-          httpHeaders: client.headers);
+      videoPlayers[media.id] = media.isLocal
+          ? VideoPlayerController.file(File(media.getPath()))
+          : VideoPlayerController.network(media.getPath(client: client),
+              httpHeaders: client.headers);
       // videoController.addListener(() {});
       await videoPlayers[media.id]?.initialize();
     }
@@ -56,16 +58,14 @@ class MediaController extends GetxController {
     final tab = tabs[index];
     if (tab.key == 'share') {
       final done = Util.showLoading(Get.context!);
-      final mp = media.getPath();
-      var file = await DefaultCacheManager().getSingleFile(mp,
-          headers: media.isVideo ? Util.getClient().headers : null);
+      final sharePath = await media.getSharePath();
       done();
-      await Share.shareFiles([file.path]);
+      await Share.shareFiles([sharePath]);
     } else if (tab.key == 'delete') {
       Util.confirmDialog(Get.context!, () async {
         Get.find<HomeController>().deleteMedia();
         Get.back();
-      });
+      }, message: media.isLocal ? 'Permanently delete file?' : 'Are you sure?');
     } else if (tab.key == 'restore') {
       Util.confirmDialog(Get.context!, () async {
         Get.find<HomeController>().restoreMedia();

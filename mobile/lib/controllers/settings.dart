@@ -3,6 +3,7 @@ import 'package:dmedia/models.dart';
 import 'package:dmedia/util.dart';
 import 'package:dmedia/background.dart';
 import 'package:package_info/package_info.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsController extends GetxController {
   late Rx<AccountSettings> accountSettings;
@@ -67,6 +68,11 @@ class SettingsController extends GetxController {
         saveChanges();
       }
     ]);
+  }
+
+  onIssueTap() async {
+    final url = 'https://github.com/altlimit/dmedia/issues';
+    await canLaunch(url) ? await launch(url) : throw 'Could not launch $url';
   }
 
   onAboutTap() async {

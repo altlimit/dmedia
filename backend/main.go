@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/altlimit/dmedia/api"
 	"github.com/altlimit/dmedia/util"
@@ -31,10 +30,8 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Handler:      api.NewServer(),
-		Addr:         fmt.Sprintf(":%s", port),
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		Handler: api.NewServer(),
+		Addr:    fmt.Sprintf(":%s", port),
 	}
 	log.Printf("DMedia Running at: http://localhost:%s", port)
 	log.Fatal(srv.ListenAndServe())

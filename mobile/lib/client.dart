@@ -71,34 +71,30 @@ class Client {
     }
   }
 
-  Future<int> upload(String path) async {
-    try {
-      await init();
-      final uri = Uri.parse(selectedUrl + '/api/upload');
-      final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(headers);
-      final stat = await FileStat.stat(path);
-      request.fields['fallbackDate'] = Util.dateTimeToString(stat.modified);
-      var cType = lookupMimeType(path);
-      if (cType != null &&
-          (cType.startsWith('image/') || cType.startsWith('video/'))) {
-        request.files.add(http.MultipartFile.fromBytes(
-            'file', await File.fromUri(Uri.parse(path)).readAsBytes(),
-            filename: p.basename(path),
-            contentType: hp.MediaType.parse(cType)));
+  Future<dynamic> upload(String path) async {
+    await init();
+    final uri = Uri.parse(selectedUrl + '/api/upload');
+    final request = http.MultipartRequest('POST', uri);
+    request.headers.addAll(headers);
+    final stat = await FileStat.stat(path);
+    request.fields['fallbackDate'] = Util.dateTimeToString(stat.modified);
+    var cType = lookupMimeType(path);
+    if (cType != null &&
+        (cType.startsWith('image/') || cType.startsWith('video/'))) {
+      request.files.add(http.MultipartFile.fromBytes(
+          'file', await File.fromUri(Uri.parse(path)).readAsBytes(),
+          filename: p.basename(path), contentType: hp.MediaType.parse(cType)));
 
-        var response = await request.send();
-        if (response.statusCode == 200) {
-          return int.parse(await response.stream.bytesToString());
-        } else if (!isRelease) {
-          print('Response: ' + await response.stream.bytesToString());
-        }
+      final response = await request.send().timeout(Duration(hours: 24));
+      final respBody = await response.stream.bytesToString();
+      if (response.statusCode == 200) {
+        return int.parse(respBody);
+      } else {
+        Util.debug('Response: $respBody');
+        return json.decode(respBody);
       }
-      return 0;
-    } catch (e) {
-      print('Error: ' + e.toString());
-      return 0;
     }
+    return null;
   }
 
   Map<String, String>? checkError(Map<String, dynamic>? data) {

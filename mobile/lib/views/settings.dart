@@ -120,6 +120,11 @@ class SettingsView extends StatelessWidget {
         onTap: c.onLocalUpload,
       ),
       ListTile(
+        title: const Text('Issues/Feature Requests'),
+        subtitle: const Text('Find or submit issues or feature requests.'),
+        onTap: c.onIssueTap,
+      ),
+      ListTile(
         title: Text('About D-Media'),
         onTap: c.onAboutTap,
         subtitle: GetBuilder<SettingsController>(

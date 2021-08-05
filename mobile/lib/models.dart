@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:workmanager/workmanager.dart' as wm;
 
@@ -158,6 +160,18 @@ class Media {
     return ctype.startsWith('video/');
   }
 
+  bool get isImage {
+    return ctype.startsWith('image/');
+  }
+
+  bool get isMedia {
+    return isImage || isVideo; // todo add isAudio?
+  }
+
+  bool get isLocal {
+    return id == 0;
+  }
+
   bool get isDeleted {
     return deleted != null;
   }
@@ -203,13 +217,31 @@ class Media {
   }
 
   String getPath({Client? client}) {
+    if (isLocal) return metaData['path']!;
     if (client == null) client = Util.getClient();
     return '${client.selectedUrl}/${client.account.id}/' +
         dateFormat.format(created) +
         '/$id/$name';
   }
 
+  Future<String> getSharePath({Client? client}) async {
+    if (isLocal) return metaData['path']!;
+    final mp = getPath(client: client);
+    final file = await DefaultCacheManager()
+        .getSingleFile(mp, headers: Util.getClient().headers);
+    return file.path;
+  }
+
+  Map<String, dynamic> get metaData {
+    return meta != null ? meta : {};
+  }
+
   Widget image({Client? client, int? size}) {
+    if (isLocal) {
+      if (isVideo) return Icon(Icons.video_label);
+      return Image.file(File(metaData['path']!));
+    }
+
     if (client == null) client = Util.getClient();
     return CachedNetworkImage(
       fit: size != null ? BoxFit.cover : null,

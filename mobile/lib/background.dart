@@ -77,13 +77,15 @@ class Tasks {
           if (maxModified < lastMod) maxModified = lastMod;
         });
         for (final file in toUpload) {
-          var id = await client.upload(file);
-          if (id > 0) {
+          Util.debug('Uploading: $file');
+          var result = await client.upload(file);
+          if (result != null && result is int) {
+            final int id = result;
             final f = File(file);
             final s = await f.stat();
             uploadedBytes += s.size;
             uploaded++;
-            Util.debug('Uploaded: $file -> $id');
+            Util.debug('Uploaded: $id');
             if (accountSettings.delete)
               try {
                 await f.delete();
@@ -92,6 +94,8 @@ class Tasks {
               }
             else
               await File(p.join(syncedDir, '$id.txt')).writeAsString(file);
+          } else {
+            Util.debug('Skipped: $result');
           }
         }
       }

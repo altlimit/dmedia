@@ -1,14 +1,16 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:dmedia/models.dart';
 import 'package:dmedia/background.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:dmedia/util.dart';
 
 class HomeController extends GetxController {
+  late StreamSubscription intentSub;
   final tabIndex = 0.obs;
   final loadedMedia = [].obs;
   final selectedIndex = 0.obs;
@@ -52,10 +54,35 @@ class HomeController extends GetxController {
     WidgetsBinding.instance!.addPostFrameCallback((Duration duration) async {
       refreshIndicatorKey.currentState?.show();
     });
+
+    intentSub = ReceiveSharingIntent.getMediaStream().listen(
+        (List<SharedMediaFile> value) async {
+      await Util.uploadShared(value.map((f) => f.path).toList());
+      if (currentTab.key == 'gallery') await onPullRefresh();
+    }, onError: (err) {
+      Util.debug("getIntentDataStream error: $err");
+    });
+
+    // For sharing images coming from outside the app while the app is closed
+    ReceiveSharingIntent.getInitialMedia()
+        .then((List<SharedMediaFile> value) async {
+      await Util.uploadShared(value.map((f) => f.path).toList());
+      if (currentTab.key == 'gallery') await onPullRefresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    intentSub.cancel();
+    super.dispose();
   }
 
   TabElement get currentTab {
     return tabs[tabIndex.value];
+  }
+
+  bool get inTrash {
+    return tabs[tabIndex.value].key == 'trash';
   }
 
   Future<void> loadMedia({bool reset = false}) async {
@@ -65,10 +92,14 @@ class HomeController extends GetxController {
       loadedMedia.clear();
     }
     if (pages == null || page <= pages!) {
-      final result = await Util.getClient().getMediaList(qs: {
-        'p': page.toString(),
-        'deleted': tabs[tabIndex.value].key == 'trash' ? '1' : '0'
-      }, onPages: (foundPages) => pages = foundPages);
+      final result = await Util.getClient().getMediaList(
+          qs: {'p': page.toString(), 'deleted': inTrash ? '1' : '0'},
+          onPages: (foundPages) => pages = foundPages);
+
+      if (loadedMedia.length == 0 && !inTrash) {
+        loadedMedia.addAll(await Util.localMedia());
+      }
+
       loadedMedia.addAll(result);
       Util.debug('Added ${result.length}');
       page++;
@@ -87,11 +118,18 @@ class HomeController extends GetxController {
   }
 
   deleteMedia() async {
-    List<int> indexes = multiSelect.value
+    final List<int> indexes = multiSelect.value
         ? selectedIndexes.keys.map((k) => k as int).toList()
         : [selectedIndex.value];
-    await Util.getClient()
-        .deleteMedia(indexes.map((i) => (loadedMedia[i] as Media).id).toList());
+    final List<int> ids = [];
+    for (var i = 0; i < indexes.length; i++) {
+      final Media m = loadedMedia[indexes[i]];
+      if (m.isLocal)
+        await File(m.getPath()).delete();
+      else
+        ids.add(m.id);
+    }
+    await Util.getClient().deleteMedia(ids);
     indexes.forEach((i) {
       loadedMedia.removeAt(i);
     });
@@ -100,7 +138,7 @@ class HomeController extends GetxController {
   }
 
   restoreMedia() async {
-    List<int> indexes = multiSelect.value
+    final List<int> indexes = multiSelect.value
         ? selectedIndexes.keys.map((k) => k as int).toList()
         : [selectedIndex.value];
     await Util.getClient().restoreMedia(
@@ -152,16 +190,13 @@ class HomeController extends GetxController {
 
   Future shareSelectedTap() async {
     final done = Util.showLoading(Get.context!);
-    final cm = DefaultCacheManager();
-    final headers = Util.getClient().headers;
     final files =
-        await Future.wait<File>(selectedIndexes.keys.map((index) async {
-      final media = loadedMedia[index];
-      final mp = media.getPath();
-      return cm.getSingleFile(mp, headers: media.isVideo ? headers : null);
+        await Future.wait<String>(selectedIndexes.keys.map((index) async {
+      final Media media = loadedMedia[index];
+      return media.getSharePath();
     }));
     done();
-    await Share.shareFiles(files.map((file) => file.path).toList());
+    await Share.shareFiles(files);
     multiSelect(false);
     selectedIndexes.clear();
   }
