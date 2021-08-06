@@ -9,13 +9,16 @@ import 'package:share_plus/share_plus.dart';
 import 'package:dmedia/util.dart';
 
 class MediaController extends GetxController {
+  final tabIndex = 0.obs;
   final videoPlayers = {}.obs;
   final List<TabElement> defaultTabs = [
     TabElement('Share', Icons.share, 'share'),
+    TabElement('Details', Icons.list, 'details'),
     TabElement('Delete', Icons.delete_outline, 'delete'),
   ];
   final List<TabElement> trashTabs = [
     TabElement('Restore', Icons.undo, 'restore'),
+    TabElement('Details', Icons.list, 'details'),
     TabElement('Delete Permanently', Icons.delete_outline, 'delete'),
   ];
 
@@ -54,8 +57,14 @@ class MediaController extends GetxController {
     return true;
   }
 
+  TabElement get currentTab {
+    return tabs[tabIndex.value];
+  }
+
   void onTabTapped(int index) async {
-    final tab = tabs[index];
+    tabIndex(index);
+    final tab = currentTab;
+    print('${tab.key}');
     if (tab.key == 'share') {
       final done = Util.showLoading(Get.context!);
       final sharePath = await media.getSharePath();

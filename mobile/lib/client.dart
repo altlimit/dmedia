@@ -7,6 +7,7 @@ import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:dmedia/util.dart';
 import 'package:dmedia/models.dart';
+import 'package:dio/dio.dart';
 
 class Client {
   Account account;
@@ -71,27 +72,43 @@ class Client {
     }
   }
 
-  Future<dynamic> upload(String path) async {
+  Future<dynamic> upload(String path,
+      {Function(int, int, int, int)? onProgress,
+      Function(FileStat)? onStat}) async {
     await init();
-    final uri = Uri.parse(selectedUrl + '/api/upload');
-    final request = http.MultipartRequest('POST', uri);
-    request.headers.addAll(headers);
+
     final stat = await FileStat.stat(path);
-    request.fields['fallbackDate'] = Util.dateTimeToString(stat.modified);
-    var cType = lookupMimeType(path);
+    if (onStat != null) onStat(stat);
+    final ext = p.extension(path).toLowerCase();
+    var cType =
+        MimeTypes.containsKey(ext) ? MimeTypes[ext] : lookupMimeType(path);
     if (cType != null &&
         (cType.startsWith('image/') || cType.startsWith('video/'))) {
-      request.files.add(http.MultipartFile.fromBytes(
-          'file', await File.fromUri(Uri.parse(path)).readAsBytes(),
-          filename: p.basename(path), contentType: hp.MediaType.parse(cType)));
-
-      final response = await request.send().timeout(Duration(hours: 24));
-      final respBody = await response.stream.bytesToString();
-      if (response.statusCode == 200) {
-        return int.parse(respBody);
-      } else {
-        Util.debug('Response: $respBody');
-        return json.decode(respBody);
+      try {
+        final dio = Dio(BaseOptions(headers: headers));
+        var lastProgress = -1;
+        final startTime = DateTime.now().millisecondsSinceEpoch;
+        final response = await dio.post(selectedUrl + '/api/upload',
+            data: await FormData.fromMap({
+              'fallbackDate': Util.dateTimeToString(stat.modified),
+              'file': await MultipartFile.fromFile(path,
+                  filename: p.basename(path),
+                  contentType: hp.MediaType.parse(cType))
+            }), onSendProgress: (received, total) {
+          if (total != -1 && onProgress != null) {
+            final newProgress = (received / total * 100).toInt();
+            if (newProgress != lastProgress) {
+              final duration =
+                  (DateTime.now().millisecondsSinceEpoch - startTime) / 1000;
+              lastProgress = newProgress;
+              onProgress(lastProgress, received ~/ duration, received, total);
+            }
+          }
+        }).timeout(Duration(hours: 24));
+        return response.data;
+      } on DioError catch (e) {
+        Util.debug('Response: ${e.response}');
+        return e.response?.data;
       }
     }
     return null;

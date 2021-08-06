@@ -1,3 +1,4 @@
+import 'package:dmedia/util.dart';
 import 'package:get/get.dart';
 import 'package:dmedia/controllers/media.dart';
 import 'package:video_player/video_player.dart';
@@ -6,60 +7,88 @@ import 'package:flutter/material.dart';
 class MediaView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(MediaController());
+    final c = Get.put(MediaController());
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.star_outline))],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-          onTap: controller.onTabTapped,
-          items: controller.tabs
-              .map((tab) => BottomNavigationBarItem(
-                    icon: Icon(tab.icon),
-                    label: tab.label,
-                  ))
-              .toList()),
-      body: GestureDetector(
-          child: Obx(() => controller.media.isVideo
-              ? FutureBuilder<bool>(
-                  key: Key('media_${controller.media.id}'),
-                  future: controller.started(),
-                  builder:
-                      (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                    if (snapshot.data == true) {
-                      return Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: <Widget>[
-                          Center(
-                              child: AspectRatio(
-                            aspectRatio:
-                                controller.videoController.value.aspectRatio,
-                            child: VideoPlayer(controller.videoController),
+        appBar: AppBar(
+          actions: [
+            IconButton(onPressed: () {}, icon: Icon(Icons.star_outline))
+          ],
+        ),
+        bottomNavigationBar: Obx(() => BottomNavigationBar(
+            currentIndex: c.tabIndex.value,
+            onTap: c.onTabTapped,
+            items: c.tabs
+                .map((tab) => BottomNavigationBarItem(
+                      icon: Icon(tab.icon),
+                      label: tab.label,
+                    ))
+                .toList())),
+        body: Obx(() => Stack(children: [
+              GestureDetector(
+                  child: c.media.isVideo
+                      ? FutureBuilder<bool>(
+                          key: Key('media_${c.media.id}'),
+                          future: c.started(),
+                          builder: (BuildContext context,
+                              AsyncSnapshot<bool> snapshot) {
+                            if (snapshot.data == true) {
+                              return Stack(
+                                alignment: Alignment.bottomCenter,
+                                children: <Widget>[
+                                  Center(
+                                      child: AspectRatio(
+                                    aspectRatio:
+                                        c.videoController.value.aspectRatio,
+                                    child: VideoPlayer(c.videoController),
+                                  )),
+                                  _ControlsOverlay(
+                                      controller: c.videoController),
+                                  VideoProgressIndicator(c.videoController,
+                                      allowScrubbing: true),
+                                ],
+                              );
+                            } else {
+                              return Center(child: CircularProgressIndicator());
+                            }
+                          },
+                        )
+                      : Container(
+                          alignment: Alignment.center,
+                          child: InteractiveViewer(
+                            panEnabled: false,
+                            boundaryMargin: EdgeInsets.all(80),
+                            minScale: 1,
+                            maxScale: 2,
+                            child: c.media.image(),
+                          ),
+                        ),
+                  onHorizontalDragEnd: c.onItemSwipe),
+              if (c.currentTab.key == 'details')
+                Positioned.fill(
+                    child: GestureDetector(
+                        onTap: () => c.tabIndex(0),
+                        child: Container(
+                          decoration: new BoxDecoration(
+                              border: new Border.all(color: Colors.transparent),
+                              color: Colors.black87),
+                          child: Center(
+                              child: Column(
+                            children: [
+                              const Text('Details'),
+                              if (!c.media.isLocal) Text('ID: ${c.media.id}'),
+                              Text('Filename: ${c.media.name}'),
+                              Text('Created: ${c.media.created}'),
+                              Text('Content Type: ${c.media.ctype}'),
+                              Text('Size: ${Util.formatBytes(c.media.size, 2)}')
+                            ],
                           )),
-                          _ControlsOverlay(
-                              controller: controller.videoController),
-                          VideoProgressIndicator(controller.videoController,
-                              allowScrubbing: true),
-                        ],
-                      );
-                    } else {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                  },
-                )
-              : Container(
-                  alignment: Alignment.center,
-                  child: InteractiveViewer(
-                    panEnabled: false,
-                    boundaryMargin: EdgeInsets.all(80),
-                    minScale: 1,
-                    maxScale: 2,
-                    child: controller.media.image(),
-                  ),
-                )),
-          onHorizontalDragEnd: controller.onItemSwipe),
-    );
+                        )),
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0)
+            ])));
   }
 }
 

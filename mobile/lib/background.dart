@@ -78,17 +78,25 @@ class Tasks {
         });
         for (final file in toUpload) {
           Util.debug('Uploading: $file');
-          var result = await client.upload(file);
+          var fileSize = 0;
+          var result = await client.upload(file, onStat: (stat) {
+            fileSize = stat.size;
+          }, onProgress: (progress, _, received, total) async {
+            if (accountSettings.notify)
+              await Util.showProgressNotify(
+                  'progress', 100, progress, accountId,
+                  title: '${p.basename(file)}',
+                  body:
+                      '${Util.formatBytes(received, 2)}/${Util.formatBytes(total, 2)} - ${progress}%');
+          });
           if (result != null && result is int) {
             final int id = result;
-            final f = File(file);
-            final s = await f.stat();
-            uploadedBytes += s.size;
+            uploadedBytes += fileSize;
             uploaded++;
             Util.debug('Uploaded: $id');
             if (accountSettings.delete)
               try {
-                await f.delete();
+                await File(file).delete();
               } catch (e) {
                 Util.debug('FailedDelete: $e');
               }

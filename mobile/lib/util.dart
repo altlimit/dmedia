@@ -25,7 +25,6 @@ class Util {
   static Future<FlutterLocalNotificationsPlugin> getLocalNotify() async {
     if (localNotify == null) {
       localNotify = FlutterLocalNotificationsPlugin();
-// initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('ic_launcher');
       final InitializationSettings initializationSettings =
@@ -35,6 +34,22 @@ class Util {
           onSelectNotification: selectNotification);
     }
     return localNotify!;
+  }
+
+  static Future showProgressNotify(
+      String channel, int maxProgress, int progress, int id,
+      {String? title, String? body, String? payload}) async {
+    final localNotify = FlutterLocalNotificationsPlugin();
+    final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        channel, channel, channel,
+        onlyAlertOnce: true,
+        showProgress: true,
+        maxProgress: maxProgress,
+        progress: progress);
+    final platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+    await localNotify.show(id, title, body, platformChannelSpecifics,
+        payload: payload);
   }
 
   static Future selectNotification(dynamic payload) async {
@@ -50,14 +65,33 @@ class Util {
     );
   }
 
-  static Function showLoading(BuildContext context) {
+  static Function showLoading(BuildContext context,
+      {bool dismissible = false, RxString? message}) {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: dismissible,
       builder: (BuildContext context) {
         return WillPopScope(
-          onWillPop: () async => false,
-          child: Center(child: CircularProgressIndicator()),
+          onWillPop: dismissible ? null : () async => false,
+          child: message != null
+              ? AlertDialog(
+                  content: Container(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Center(child: CircularProgressIndicator()),
+                            Center(
+                                child: Obx(() => Column(
+                                      children: message.value
+                                          .split('\n')
+                                          .map((msg) => Text(msg))
+                                          .toList(),
+                                    )))
+                          ])),
+                )
+              : Center(child: CircularProgressIndicator()),
         );
       },
     );
@@ -310,8 +344,9 @@ class Util {
   }
 
   static Future<List<Media>> localMedia() async {
-    final accountSettings = Util.getAccountSettings()!;
+    final accountSettings = Util.getAccountSettings();
     final List<Media> result = [];
+    if (accountSettings == null) return result;
     for (var folder in accountSettings.folders) {
       var dir = Directory(folder);
       await dir.list().forEach((file) async {
@@ -339,11 +374,21 @@ class Util {
   }
 
   static Future uploadShared(List<String> files) async {
-    debug('Upload shared: $files');
-    final done = Util.showLoading(Get.context!);
-    final client = getClient();
-    await Future.wait(files.map((file) => client.upload(file)));
-    done();
+    if (files.length > 0) {
+      debug('Upload shared: $files');
+      final msg = 'Uploading...'.obs;
+      final done = Util.showLoading(Get.context!, message: msg);
+      final client = getClient();
+      for (var i = 0; i < files.length; i++) {
+        final progressText =
+            files.length > 1 ? '${i + 1} of ${files.length} ' : '';
+        await client.upload(files[i],
+            onProgress: (progress, speed, received, total) async {
+          msg('${progressText}\n${p.basename(files[i])}\n${Util.formatBytes(received, 2)}/${Util.formatBytes(total, 2)} (${progress}%)\nSpeed: ${Util.formatBytes(speed, 2)}/s');
+        });
+      }
+      done();
+    }
   }
 }
 

@@ -76,6 +76,7 @@ class SettingsController extends GetxController {
   }
 
   onAboutTap() async {
-    Util.debug('Test ${accountSettings.value.lastSync}');
+    final url = 'https://github.com/altlimit/dmedia';
+    await canLaunch(url) ? await launch(url) : throw 'Could not launch $url';
   }
 }

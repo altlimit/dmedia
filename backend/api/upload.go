@@ -66,10 +66,6 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		log.Printf("Name: %s -> %s", fName, cType)
-		if fName == "20210802_142953.mp4" {
-			return newValidationErr("content_type", "not supported")
-		}
 		id, err := u.AddMedia(fName, cType, content, fallbackDate)
 		if err != nil {
 			if err == model.ErrNotSupported {

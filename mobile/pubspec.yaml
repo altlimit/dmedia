@@ -45,6 +45,7 @@ dependencies:
   package_info: ^2.0.2
   url_launcher: ^6.0.9
   receive_sharing_intent: ^1.4.5
+  dio: ^4.0.0
 
 dev_dependencies:
   flutter_test:
