@@ -14,12 +14,15 @@ class SettingsFolderController extends GetxController {
   }
 
   onAddDirectoryTap() async {
-    await Util.chooseDirectory(Get.context!, (dir) {
-      if (!folders.contains(dir.path)) {
-        folders.add(dir.path);
+    try {
+      final String? path = await Util.nativeCall('folderPicker');
+      if (path != null && !folders.contains(path)) {
+        folders.add(path);
         onUpdate(folders);
       }
-    });
+    } catch (e) {
+      Util.debug('onAddDirectoryTap: Error $e');
+    }
   }
 
   onLongPressItem(int index) {

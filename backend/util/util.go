@@ -108,21 +108,28 @@ func Int64ToStrings(vals []int64) []string {
 	return newVals
 }
 
-func TimeFromPath(p string) time.Time {
+func TimeFromString(p string) (time.Time, bool) {
 	now := time.Now()
 	m := dateTimeRegex.FindStringSubmatch(p)
 	if len(m) > 0 {
 		now, _ = time.Parse(DateTimeFormat, fmt.Sprintf("%s-%s-%s %s:%s:%s", m[1], m[2], m[3], m[4], m[5], m[6]))
-		return now
+		return now, true
 	}
 	m = dateRegex.FindStringSubmatch(p)
 	if len(m) > 0 {
 		now, _ = time.Parse(DateFormat, fmt.Sprintf("%s-%s-%s", m[1], m[2], m[3]))
-		return now
+		return now, true
 	}
-	fi, err := os.Stat(p)
-	if err == nil {
-		return fi.ModTime()
+	return now, false
+}
+
+func TimeFromPath(p string) time.Time {
+	now, ok := TimeFromString(p)
+	if !ok {
+		fi, err := os.Stat(p)
+		if err == nil {
+			return fi.ModTime()
+		}	
 	}
 	return now
 }

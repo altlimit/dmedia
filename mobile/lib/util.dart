@@ -13,13 +13,34 @@ import 'package:dmedia/models.dart';
 import 'package:dmedia/client.dart';
 import 'package:dmedia/preference.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 
 class Util {
   static FlutterLocalNotificationsPlugin? localNotify;
   static Map<int, Client> Clients = {};
+  static const platform = MethodChannel('org.altlimit.dmedia');
 
   static void debug(Object msg) {
     if (!isRelease) print(msg);
+  }
+
+  static Future<dynamic> nativeCall(String method, [dynamic arguments]) async {
+    try {
+      return await platform.invokeMethod(method, arguments);
+    } catch (e) {
+      Util.debug("invokeMethod($method, $arguments): Error '${e}'.");
+    }
+    return null;
+  }
+
+  static Future<bool> deleteFile(String path) async {
+    try {
+      return await platform
+          .invokeMethod('removeFile', <String, dynamic>{'path': path});
+    } on PlatformException catch (e) {
+      Util.debug("deleteFile: Error '${e.message}'.");
+    }
+    return false;
   }
 
   static Future<FlutterLocalNotificationsPlugin> getLocalNotify() async {
@@ -40,16 +61,21 @@ class Util {
       String channel, int maxProgress, int progress, int id,
       {String? title, String? body, String? payload}) async {
     final localNotify = FlutterLocalNotificationsPlugin();
-    final androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        channel, channel, channel,
-        onlyAlertOnce: true,
-        showProgress: true,
-        maxProgress: maxProgress,
-        progress: progress);
-    final platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-    await localNotify.show(id, title, body, platformChannelSpecifics,
-        payload: payload);
+    try {
+      final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+          channel, channel, channel,
+          onlyAlertOnce: true,
+          showProgress: true,
+          maxProgress: maxProgress,
+          progress: progress);
+      final platformChannelSpecifics =
+          NotificationDetails(android: androidPlatformChannelSpecifics);
+      await localNotify.show(id, title, body, platformChannelSpecifics,
+          payload: payload);
+    } catch (e) {
+      Util.debug(
+          'showProgressNotify: Error($e) $channel, $maxProgress, $progress, $id, $title, $body, $payload');
+    }
   }
 
   static Future selectNotification(dynamic payload) async {

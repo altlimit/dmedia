@@ -66,6 +66,12 @@ func (s *Server) handleUpload() http.HandlerFunc {
 		if err != nil {
 			return err
 		}
+
+		nameDate, ok := util.TimeFromString(fName)
+		if ok {
+			fallbackDate = nameDate.Format(util.DateTimeFormat)
+		}
+
 		id, err := u.AddMedia(fName, cType, content, fallbackDate)
 		if err != nil {
 			if err == model.ErrNotSupported {

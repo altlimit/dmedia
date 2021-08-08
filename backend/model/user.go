@@ -135,7 +135,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 			return 0, fmt.Errorf("AddMedia: error time.Parse %v", err)
 		}
 	} else {
-		createdTime = util.TimeFromPath(name)
+		createdTime, _ = util.TimeFromString(name)
 	}
 	created := createdTime.Format(util.DateTimeFormat)
 	if strings.Index(cType, "image/") == 0 {

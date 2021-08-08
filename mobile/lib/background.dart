@@ -94,13 +94,15 @@ class Tasks {
             uploadedBytes += fileSize;
             uploaded++;
             Util.debug('Uploaded: $id');
-            if (accountSettings.delete)
-              try {
-                await File(file).delete();
-              } catch (e) {
-                Util.debug('FailedDelete: $e');
+            if (accountSettings.delete) {
+              if (!(await Util.deleteFile(file))) {
+                try {
+                  await File(file).delete();
+                } catch (e) {
+                  Util.debug('FailedDelete: $e');
+                }
               }
-            else
+            } else
               await File(p.join(syncedDir, '$id.txt')).writeAsString(file);
           } else {
             Util.debug('Skipped: $result');
