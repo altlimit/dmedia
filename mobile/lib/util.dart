@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:dmedia/models.dart';
 import 'package:dmedia/client.dart';
 import 'package:dmedia/preference.dart';
@@ -137,43 +134,6 @@ class Util {
     var f = await File(lockFile.path).open(mode: FileMode.write);
     await f.lock(FileLock.exclusive);
     await raf.close();
-  }
-
-  static Future<void> chooseDirectory(
-      BuildContext context, Function(Directory) onSelect) async {
-    if (await Permission.storage.request().isGranted) {
-      var dirs = await getExternalStorageDirectories();
-      if (dirs != null) {
-        Function(String) dirSelector = (storagePath) async {
-          var path = await FilesystemPicker.open(
-            title: 'Select Folder',
-            context: context,
-            rootDirectory: Directory(storagePath),
-            fsType: FilesystemType.folder,
-            pickText: 'Choose Directory',
-            folderIconColor: Colors.teal,
-          );
-          if (path != null) {
-            var dir = Directory(path);
-            print('Dir: ' +
-                json.encode(
-                    dir.listSync().map((d) => d.path.toString()).toList()));
-            onSelect(dir);
-          }
-        };
-
-        var storageOptions = dirs
-            .map((d) => d.path.substring(0, d.path.indexOf('/Android/')))
-            .toList();
-        if (storageOptions.length == 1)
-          await dirSelector(storageOptions[0]);
-        else
-          dialogList(context, "Select Storage", storageOptions,
-              (_, selected) async {
-            await dirSelector(selected);
-          });
-      }
-    }
   }
 
   static String dateTimeToString(DateTime dt) {
