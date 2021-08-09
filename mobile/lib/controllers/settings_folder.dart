@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:dmedia/util.dart';
+import 'package:saf/saf.dart';
 
 class SettingsFolderController extends GetxController {
   late RxList<String> folders;
@@ -15,7 +16,7 @@ class SettingsFolderController extends GetxController {
 
   onAddDirectoryTap() async {
     try {
-      final String? path = await Util.nativeCall('folderPicker');
+      final path = await Saf.openFolderPicker();
       if (path != null && !folders.contains(path)) {
         folders.add(path);
         onUpdate(folders);

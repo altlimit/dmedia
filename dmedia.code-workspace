@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "mobile"
+		},
+		{
+			"path": "saf"
 		}
 	],
 	"settings": {

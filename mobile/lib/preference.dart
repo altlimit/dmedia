@@ -14,7 +14,14 @@ class Preference {
 
   static void clear() {
     _prefs!.clear();
-    _memoryPrefs.clear();
+    clearMemory();
+  }
+
+  static void clearMemory([String? key]) {
+    if (key != null)
+      _memoryPrefs.remove(key);
+    else
+      _memoryPrefs.clear();
   }
 
   static void setJson(String key, dynamic value) {

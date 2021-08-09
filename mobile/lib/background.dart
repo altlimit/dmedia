@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:dmedia/models.dart';
 import 'package:dmedia/util.dart';
 import 'package:dmedia/client.dart';
@@ -13,6 +14,7 @@ import 'dart:isolate';
 const bgChannelName = 'org.altlimit.dmedia';
 
 void callbackDispatcher() {
+  WidgetsFlutterBinding.ensureInitialized();
   final sendPort = IsolateNameServer.lookupPortByName(bgChannelName);
 
   var emit = (String task, dynamic data) {
@@ -96,11 +98,7 @@ class Tasks {
             Util.debug('Uploaded: $id');
             if (accountSettings.delete) {
               if (!(await Util.deleteFile(file))) {
-                try {
-                  await File(file).delete();
-                } catch (e) {
-                  Util.debug('FailedDelete: $e');
-                }
+                Util.debug('FailedDelete: $file');
               }
             } else
               await File(p.join(syncedDir, '$id.txt')).writeAsString(file);
@@ -115,6 +113,7 @@ class Tasks {
         Util.saveAccountSettings(accountSettings, internalId: accountId);
       }
       if (accountSettings.notify && uploaded > 0) {
+        await Future.delayed(Duration(seconds: 1));
         final notify = await Util.getLocalNotify();
         notify.show(
             account.id,
@@ -146,13 +145,11 @@ class Tasks {
       Util.debug('Deleting ${file.path} -> $path');
       if (await mediaFile.exists()) {
         final stat = await mediaFile.stat();
-        try {
-          await mediaFile.delete();
+        if (await Util.deleteFile(mediaFile.path)) {
           deleted++;
           deletedBytes += stat.size;
-        } catch (e) {
-          Util.debug('DeleteFailed: $e');
-        }
+        } else
+          Util.debug('DeleteFailed: $path');
       }
       await file.delete();
     }

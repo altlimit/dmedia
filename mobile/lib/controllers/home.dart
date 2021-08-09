@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:dmedia/models.dart';
@@ -125,7 +123,7 @@ class HomeController extends GetxController {
     for (var i = 0; i < indexes.length; i++) {
       final Media m = loadedMedia[indexes[i]];
       if (m.isLocal)
-        await File(m.getPath()).delete();
+        await Util.deleteFile(m.getPath());
       else
         ids.add(m.id);
     }

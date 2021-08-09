@@ -33,28 +33,18 @@ android {
     }
 
     defaultConfig {
-        applicationId "org.altlimit.dmedia"
-        minSdkVersion 19
+        applicationId "org.altlimit.saf"
+        minSdkVersion 16
         targetSdkVersion 30
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-        multiDexEnabled true
     }
 
-    signingConfigs {
-        release {
-            keyAlias localProperties['keyAlias']
-            keyPassword localProperties['keyPassword']
-            storeFile file(localProperties['storeFile'])
-            storePassword localProperties['storePassword']
-        }
-    }
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
-            // signingConfig signingConfigs.release
         }
     }
 }
@@ -65,4 +55,5 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "com.anggrayudi:storage:0.11.1"
 }
