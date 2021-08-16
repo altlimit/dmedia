@@ -45,8 +45,14 @@ class HomeController extends GetxController {
     Bg.on(taskSync, 'message', (d) async {
       var data = d as Map<String, String>;
       if (data.containsKey('message'))
-        Util.showMessage(Get.context!, data['message']!);
+        Util.debounce(1000, Util.showMessage, [Get.context!, data['message']!]);
       refreshIndicatorKey.currentState?.show();
+    });
+
+    Bg.on('client', 'snackbar', (d) {
+      var data = d as Map<String, String>;
+      if (data.containsKey('message'))
+        Util.debounce(1000, Util.showMessage, [Get.context!, data['message']!]);
     });
 
     WidgetsBinding.instance!.addPostFrameCallback((Duration duration) async {
@@ -72,6 +78,8 @@ class HomeController extends GetxController {
   @override
   void dispose() {
     intentSub.cancel();
+    Bg.off(taskSync, name: 'message');
+    Bg.off('client', name: 'snackbar');
     super.dispose();
   }
 

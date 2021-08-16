@@ -59,7 +59,7 @@ class SafPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry
       if (storageResult != null)
         storageResult?.success(null);
       storageResult = null;
-      storageHelper.openFolderPicker();        
+      storageHelper.openFolderPicker();   
       storageResult = result;
     } else {
       result.notImplemented()

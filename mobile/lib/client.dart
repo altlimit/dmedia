@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:dmedia/background.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as hp;
 import 'package:mime/mime.dart';
@@ -59,15 +60,29 @@ class Client {
       if (resp.statusCode != 200 || !isRelease) print('response: ' + resp.body);
       return resp.body.length > 0 ? json.decode(resp.body) : null;
     } on SocketException {
-      print('Not connected to internet');
+      Bg.emit({
+        'task': 'client',
+        'data': {'message': 'Not connected to internet'}
+      });
       return {'error': 'connection failed'};
     } on TimeoutException {
-      print('Not connected to internet');
+      Bg.emit({
+        'task': 'client',
+        'data': {'message': 'Conntection timeout'}
+      });
       return {'error': 'connection timeout'};
     } on FormatException {
+      Bg.emit({
+        'task': 'client',
+        'data': {'message': 'Unexpected response'}
+      });
       return {'error': 'unexpected response'};
     } on Exception catch (e) {
       print('Error: ' + e.toString());
+      Bg.emit({
+        'task': 'client',
+        'data': {'message': 'Unknown error'}
+      });
       return {'error': e.toString()};
     }
   }

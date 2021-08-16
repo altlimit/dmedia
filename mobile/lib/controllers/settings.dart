@@ -61,8 +61,6 @@ class SettingsController extends GetxController {
   }
 
   onManageFoldersTap() async {
-    // final result = await Util.nativeCall('requestAccess');
-    // Util.debug('Result: $result');
     Get.toNamed('/settings/folder', arguments: [
       accountSettings.value.folders.obs,
       (folders) {

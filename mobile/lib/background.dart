@@ -86,7 +86,7 @@ class Tasks {
           }, onProgress: (progress, _, received, total) async {
             if (accountSettings.notify)
               await Util.showProgressNotify(
-                  'progress', 100, progress, accountId,
+                  'taskProgress', 100, progress, accountId,
                   title: '${p.basename(file)}',
                   body:
                       '${Util.formatBytes(received, 2)}/${Util.formatBytes(total, 2)} - ${progress}%');
@@ -187,14 +187,18 @@ class Bg {
     var port = ReceivePort();
     if (IsolateNameServer.registerPortWithName(port.sendPort, bgChannelName)) {
       isListening = true;
-      port.listen((dynamic data) async {
-        Map<String, dynamic> recv = data;
-        if (recv.containsKey('task') &&
-            callbacks.containsKey(recv['task']) &&
-            recv.containsKey('data'))
-          callbacks[recv['task']]!.values.forEach((cb) => cb(recv['data']));
+      port.listen((dynamic data) {
+        emit(data);
       });
     }
+  }
+
+  static void emit(dynamic data) {
+    Map<String, dynamic> recv = data;
+    if (recv.containsKey('task') &&
+        callbacks.containsKey(recv['task']) &&
+        recv.containsKey('data'))
+      callbacks[recv['task']]!.values.forEach((cb) => cb(recv['data']));
   }
 
   static void on(String taskName, String name, Function(dynamic) cb) {

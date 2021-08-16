@@ -17,9 +17,17 @@ class Util {
   static FlutterLocalNotificationsPlugin? localNotify;
   static Map<int, Client> Clients = {};
   static const platform = MethodChannel('org.altlimit.dmedia/native');
+  static Map debounceTimeouts = {};
 
   static void debug(Object msg) {
     if (!isRelease) print(msg);
+  }
+
+  static void debounce(int timeout, Function target, List arguments) {
+    if (debounceTimeouts.containsKey(target)) debounceTimeouts[target].cancel();
+    debounceTimeouts[target] = Timer(Duration(milliseconds: timeout), () {
+      Function.apply(target, arguments);
+    });
   }
 
   static Future<dynamic> nativeCall(String method, [dynamic arguments]) async {
@@ -60,7 +68,8 @@ class Util {
     final localNotify = await getLocalNotify();
     final androidPlatformChannelSpecifics = AndroidNotificationDetails(
         channel, channel, channel,
-        onlyAlertOnce: true,
+        priority: Priority.low,
+        importance: Importance.low,
         showProgress: true,
         maxProgress: maxProgress,
         progress: progress);
