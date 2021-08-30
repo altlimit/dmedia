@@ -16,7 +16,12 @@ class HomeView extends StatelessWidget {
               slivers: <Widget>[
                 Obx(() => SliverAppBar(
                       actions: [
-                        if (c.multiSelect.value) ...[
+                        if (c.isGetContent.value && c.multiSelect.value)
+                          IconButton(
+                            icon: Icon(Icons.check),
+                            onPressed: c.shareSelectedTap,
+                          ),
+                        if (!c.isGetContent.value && c.multiSelect.value) ...[
                           if (c.currentTab.key == 'trash')
                             IconButton(
                               icon: Icon(Icons.undo),

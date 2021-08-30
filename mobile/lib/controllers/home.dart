@@ -7,27 +7,35 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:dmedia/util.dart';
 
-class HomeController extends GetxController {
+class HomeController extends GetxController with WidgetsBindingObserver {
   late StreamSubscription intentSub;
   final tabIndex = 0.obs;
   final loadedMedia = [].obs;
   final selectedIndex = 0.obs;
   final selectedIndexes = {}.obs;
   final multiSelect = false.obs;
+  final isGetContent = false.obs;
+  final allowMultiple = false.obs;
   int page = 1;
   int? pages;
   final refreshIndicatorKey = new GlobalKey<RefreshIndicatorState>();
-  final List<TabElement> tabs = [
+  final List<TabElement> tabOptions = [
     TabElement('Gallery', Icons.photo, 'gallery'),
     // TabElement('Albums', Icons.photo_album, 'albums'),
     TabElement('Trash', Icons.delete_outline, 'trash'),
   ];
   late ScrollController scrollController;
+  String? intentAction;
+
+  List<TabElement> get tabs {
+    return tabOptions;
+  }
 
   @override
   void onInit() {
     super.onInit();
 
+    updateIntentAction();
     scrollController = ScrollController();
     scrollController.addListener(() async {
       if (scrollController.offset >=
@@ -81,6 +89,27 @@ class HomeController extends GetxController {
     Bg.off(taskSync, name: 'message');
     Bg.off('client', name: 'snackbar');
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      updateIntentAction();
+    }
+    print('State: ' + state.toString());
+  }
+
+  Future updateIntentAction() async {
+    intentAction = await Util.nativeCall('getIntentAction');
+    isGetContent(intentAction != null &&
+        (intentAction!.startsWith('android.intent.action.GET_CONTENT') ||
+            intentAction!.startsWith('android.intent.action.PICK')));
+    print('IntentAction: $intentAction');
+    if (isGetContent.value) {
+      allowMultiple(intentAction!.contains('|MULTIPLE'));
+      Get.reset();
+      onTabTapped(0);
+    }
   }
 
   TabElement get currentTab {
@@ -202,7 +231,12 @@ class HomeController extends GetxController {
       return media.getSharePath();
     }));
     done();
-    await Share.shareFiles(files);
+    if (isGetContent.value)
+      Util.nativeCall('setResult',
+          files.length == 1 ? {'path': files[0]} : {'paths': files});
+    else
+      await Share.shareFiles(files);
+
     multiSelect(false);
     selectedIndexes.clear();
   }
@@ -223,9 +257,24 @@ class HomeController extends GetxController {
     Get.toNamed('/settings');
   }
 
-  onMediaItemTap(int index) {
+  onMediaItemTap(int index) async {
+    if (isGetContent.value) {
+      final Media media = loadedMedia[index];
+      if (intentAction!.contains('|video/') && !media.isVideo) {
+        Util.showMessage(Get.context!, 'Select a video');
+        return;
+      } else if (intentAction!.contains('|image/') && !media.isImage) {
+        Util.showMessage(Get.context!, 'Select a photo');
+        return;
+      }
+    }
     if (multiSelect.value) {
       toggleSelected(index);
+      return;
+    }
+    if (isGetContent.value) {
+      selectedIndexes.addAll({index: true});
+      await shareSelectedTap();
       return;
     }
     selectedIndex(index);
@@ -233,6 +282,9 @@ class HomeController extends GetxController {
   }
 
   onMediaLongPress(int index) {
+    if (isGetContent.value && !allowMultiple.value) {
+      return;
+    }
     multiSelect(true);
     toggleSelected(index);
 

@@ -2,8 +2,8 @@ package org.altlimit.saf
 
 import androidx.annotation.NonNull
 
-import android.app.Activity;
-import android.content.Context;
+import android.app.Activity
+import android.content.Context
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -11,7 +11,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry;
+import io.flutter.plugin.common.PluginRegistry
 
 import android.util.Log
 import android.os.Bundle
@@ -34,12 +34,12 @@ class SafPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry
   private lateinit var context: Context
   private lateinit var activity: Activity
   private lateinit var activityBinding: ActivityPluginBinding 
-  private var storageResult: MethodChannel.Result? = null;
+  private var storageResult: MethodChannel.Result? = null
 
-  private val LOGTAG = "SAF";
+  private val LOGTAG = "SAF"
 
   private fun log(message: String) {
-    Log.d(LOGTAG, message);
+    Log.d(LOGTAG, message)
   }
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -50,17 +50,17 @@ class SafPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     if (call.method == "removeFile") {
-      val path: String? = call.argument("path");
+      val path: String? = call.argument("path")
       if (path != null)
-        result.success(removeFile(path));
+        result.success(removeFile(path))
       else
-        result.error("path error", "path not provided", null);
+        result.error("path error", "path not provided", null)
     } else if (call.method == "folderPicker") {
       if (storageResult != null)
-        storageResult?.success(null);
-      storageResult = null;
-      storageHelper.openFolderPicker();   
-      storageResult = result;
+        storageResult?.success(null)
+      storageResult = null
+      storageHelper.openFolderPicker()   
+      storageResult = result
     } else {
       result.notImplemented()
     }
@@ -71,51 +71,48 @@ class SafPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry
   }
 
   override fun onDetachedFromActivity() {
-    activityBinding.removeActivityResultListener(this);
-    activityBinding.removeOnSaveStateListener(this);
+    activityBinding.removeActivityResultListener(this)
+    activityBinding.removeOnSaveStateListener(this)
 }
 
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
   }
 
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-      activity = binding.getActivity();
+      activity = binding.getActivity()
       activityBinding = binding
       storageHelper = SimpleStorageHelper(activity, REQUEST_CODE_STORAGE_ACCESS, null)
       storageHelper.onFolderSelected = { _, folder ->
-        storageResult?.success(folder.getAbsolutePath(context));
-        storageResult = null;
+        storageResult?.success(folder.getAbsolutePath(context))
+        storageResult = null
       }
 
-      binding.addActivityResultListener(this);
-      binding.addOnSaveStateListener(this);
+      binding.addActivityResultListener(this)
+      binding.addOnSaveStateListener(this)
     }
 
   override fun onDetachedFromActivityForConfigChanges() {
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent): Boolean {
-    // super.onActivityResult(requestCode, resultCode, data)
     storageHelper.storage.onActivityResult(requestCode, resultCode, data)
     return true
   }
 
   override fun onSaveInstanceState(outState: Bundle) {
       storageHelper.onSaveInstanceState(outState)
-      // super.onSaveInstanceState(outState)
   }
 
   override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
-      // super.onRestoreInstanceState(savedInstanceState)
       if (savedInstanceState != null)
         storageHelper.onRestoreInstanceState(savedInstanceState)
   }
   
   private fun removeFile(path: String): Boolean {
-    val file = DocumentFileCompat.fromFullPath(context, path, requiresWriteAccess = true);
+    val file = DocumentFileCompat.fromFullPath(context, path, requiresWriteAccess = true)
     if (file != null) {
-      return file.delete();
+      return file.delete()
     }
-    return false;
+    return false
   }  
 }
