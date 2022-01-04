@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -79,9 +80,43 @@ func (m *Meta) Value() (driver.Value, error) {
 	return json.Marshal(m)
 }
 
+func (t *DateTime) Scan(src interface{}) error {
+	switch tt := src.(type) {
+	case time.Time:
+		*t = DateTime(tt)
+		return nil
+	case string:
+		if tt == "" {
+			return nil
+		}
+		dt, err := time.Parse(util.DateTimeFormat, tt)
+		if err == nil {
+			*t = DateTime(dt)
+		}
+		return err
+	default:
+		log.Println("Type", reflect.TypeOf(src))
+		return ErrInvalidType
+	}
+}
+
+func (t *DateTime) Value() (driver.Value, error) {
+	return time.Time(*t).Format(util.DateTimeFormat), nil
+}
+
 func (t DateTime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(util.DateTimeFormat))
 	return []byte(stamp), nil
+}
+
+func (t *DateTime) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	dt, err := time.Parse(util.DateTimeFormat, s)
+	if err == nil {
+		ddt := DateTime(dt)
+		*t = ddt
+	}
+	return err
 }
 
 func (ed *ExifData) Walk(name exif.FieldName, tag *tiff.Tag) error {
@@ -406,7 +441,7 @@ func GetUsers() ([]User, error) {
 	}
 	users := []User{}
 	if err = db.Select(&users, `SELECT * FROM user`); err != nil {
-		return nil, fmt.Errorf("GetUsers select error")
+		return nil, fmt.Errorf("GetUsers select error %v", err)
 	}
 	return users, nil
 }

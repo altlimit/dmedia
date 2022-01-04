@@ -61,13 +61,15 @@ func saveSyncLocation(userID int64, syncLoc *SyncLocation) error {
 			syncLoc.ID = id
 		}
 	} else {
+		args = append(args, syncLoc.Deleted)
 		args = append(args, syncLoc.ID)
 		_, err = db.Exec(`
 		UPDATE sync_location SET
 		name = $1,
 		stype = $2,
-		config = $3
-		WHERE id = $4
+		config = $3,
+		deleted = $4
+		WHERE id = $5
 		`, args...)
 	}
 	if err != nil {
@@ -86,4 +88,28 @@ func GetSyncLocation(userID int64, locID int64) (*SyncLocation, error) {
 		return nil, fmt.Errorf("GetSyncLocation error get %v", err)
 	}
 	return loc, nil
+}
+
+func GetSyncs(userID int64) ([]SyncLocation, error) {
+	db, err := getDB(userID)
+	if err != nil {
+		return nil, fmt.Errorf("GetSyncs getDB error: %v", err)
+	}
+	syncs := []SyncLocation{}
+	if err = db.Select(&syncs, `SELECT * FROM sync_location WHERE deleted IS NULL`); err != nil {
+		return nil, fmt.Errorf("GetSyncs select error %v", err)
+	}
+	return syncs, nil
+}
+
+func DeleteSyncByID(userID int64, locID int64) error {
+	db, err := getDB(userID)
+	if err != nil {
+		return fmt.Errorf("DeleteSyncByID getDB error: %v", err)
+	}
+	_, err = db.Exec(`DELETE FROM sync_location WHERE id = ?`, locID)
+	if err != nil {
+		return fmt.Errorf("DeleteSyncByID exec error %v", err)
+	}
+	return nil
 }

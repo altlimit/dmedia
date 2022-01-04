@@ -16,6 +16,9 @@ func (s *Server) handleCreateSyncLocation() http.HandlerFunc {
 		}
 		ctx := r.Context()
 		u := s.currentUser(ctx)
+		if u == nil {
+			return errAuth
+		}
 		if err := req.Save(u); err != nil {
 			return err
 		}
@@ -31,6 +34,9 @@ func (s *Server) handleSaveSyncLocation() http.HandlerFunc {
 		}
 		ctx := r.Context()
 		u := s.currentUser(ctx)
+		if u == nil {
+			return errAuth
+		}
 		locID := util.Atoi64(mux.Vars(r)["id"])
 		loc, err := model.GetSyncLocation(u.ID, locID)
 		if err != nil {
@@ -44,5 +50,31 @@ func (s *Server) handleSaveSyncLocation() http.HandlerFunc {
 			return err
 		}
 		return loc
+	})
+}
+
+func (s *Server) handleGetSync() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		ctx := r.Context()
+		u := s.currentUser(ctx)
+		if u == nil {
+			return errAuth
+		}
+		syncs, err := model.GetSyncs(u.ID)
+		if err != nil {
+			return err
+		}
+		return s.cursor(syncs, 1)
+	})
+}
+
+func (s *Server) handleDeleteSync() http.HandlerFunc {
+	return s.handler(func(r *http.Request) interface{} {
+		u := s.currentUser(r.Context())
+		if u == nil {
+			return errAuth
+		}
+		locID := util.Atoi64(mux.Vars(r)["id"])
+		return model.DeleteSyncByID(u.ID, locID)
 	})
 }

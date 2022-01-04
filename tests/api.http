@@ -49,6 +49,49 @@ Content-Type: application/json
 
 ###
 
+POST {{baseUrl}}/api/syncs
+Authorization: {{auth}}
+Content-Type: application/json
+
+{
+    "name": "TG 1",
+    "type": "telegram",
+    "config": {
+        "token": "",
+        "channel": ""
+    }
+}
+
+###
+
+PUT {{baseUrl}}/api/syncs/1
+Authorization: {{auth}}
+Content-Type: application/json
+
+{
+    "name": "TG 2",
+    "type": "telegram",
+    "config": {
+        "token": "",
+        "channel": ""
+    },
+    "deleted": "2021-01-02 15:04:05"
+}
+
+###
+
+GET {{baseUrl}}/api/syncs
+Authorization: {{auth}}
+Content-Type: application/json
+
+###
+
+DELETE {{baseUrl}}/api/syncs/3
+Authorization: {{auth}}
+Content-Type: application/json
+
+###
+
 POST {{baseUrl}}/api/upload/dir
 Authorization: {{auth}}
 Content-Type: application/json
