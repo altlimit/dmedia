@@ -17,20 +17,20 @@ Authorization: {{auth}}
 Content-Type: application/json
 
 {
-    "username": "admin",
-    "password": "123",
+    "username": "a",
+    "password": "a",
     "admin": true,
     "active": true
 }
 
 ###
 
-PUT {{baseUrl}}/api/users/4
+PUT {{baseUrl}}/api/users/3
 Authorization: {{auth}}
 Content-Type: application/json
 
 {
-    "username": "a",
+    "username": "aaa",
     "password": "aa"
 }
 
@@ -39,6 +39,13 @@ Content-Type: application/json
 GET {{baseUrl}}/api/users
 Authorization: {{auth}}
 Content-Type: application/json
+
+###
+
+GET {{baseUrl}}/api/syncs
+Authorization: {{auth}}
+Content-Type: application/json
+
 
 ###
 
@@ -109,12 +116,12 @@ Authorization: {{auth}}
 
 ###
 
-GET {{baseUrl}}/api/media/2
+GET {{baseUrl}}/api/media/1
 Authorization: {{auth}}
 
 ###
 
-DELETE {{baseUrl}}/api/media/100
+DELETE {{baseUrl}}/api/media/1
 Authorization: {{auth}}
 
 ###

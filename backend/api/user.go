@@ -72,6 +72,7 @@ func (s *Server) handleSaveUser() http.HandlerFunc {
 			}
 			user.IsAdmin = req.IsAdmin
 			user.Active = req.IsAdmin
+			u = user
 		} else if user.ID == u.ID {
 			if req.Name != "" {
 				user.Name = req.Name

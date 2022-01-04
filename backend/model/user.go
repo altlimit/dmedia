@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -20,16 +21,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	mediaFields = `
-		id, name, public, checksum, ctype,
-		strftime('%Y-%m-%d %H:%M:%S', created) as created, strftime('%Y-%m-%d %H:%M:%S', modified) as modified, 
-		size, meta, strftime('%Y-%m-%d %H:%M:%S', deleted) as deleted`
-	userFields = `
-		id, name, password, admin, active
-	`
-)
-
 var (
 	sBool = map[bool]int{true: 1, false: 0}
 )
@@ -37,24 +28,25 @@ var (
 type (
 	DateTime time.Time
 	User     struct {
-		ID       int64  `json:"id"`
-		Name     string `json:"username" validate:"required"`
-		Password string `json:"password,omitempty"`
-		IsAdmin  bool   `json:"admin"`
-		Active   bool   `json:"active"`
+		ID       int64    `json:"id" db:"id"`
+		Name     string   `json:"username" db:"name" validate:"required"`
+		Password string   `json:"password,omitempty" db:"password"`
+		IsAdmin  bool     `json:"admin" db:"admin"`
+		Active   bool     `json:"active" db:"active"`
+		Created  DateTime `json:"-" db:"created"`
 	}
 
 	Media struct {
-		ID          int64     `json:"id"`
-		Name        string    `json:"name"`
-		Public      bool      `json:"public"`
-		Checksum    string    `json:"checksum"`
-		ContentType string    `json:"ctype"`
-		Created     DateTime  `json:"created"`
-		Modified    DateTime  `json:"modified"`
-		Deleted     *DateTime `json:"deleted"`
-		Size        int       `json:"size"`
-		Meta        *Meta     `json:"meta"`
+		ID          int64     `json:"id" db:"id"`
+		Name        string    `json:"name" db:"name"`
+		Public      bool      `json:"public" db:"public"`
+		Checksum    string    `json:"checksum" db:"checksum"`
+		ContentType string    `json:"ctype" db:"ctype"`
+		Created     DateTime  `json:"created" db:"created"`
+		Modified    DateTime  `json:"modified" db:"modified"`
+		Deleted     *DateTime `json:"deleted" db:"deleted"`
+		Size        int       `json:"size" db:"size"`
+		Meta        *Meta     `json:"meta" db:"meta"`
 	}
 
 	Meta struct {
@@ -65,6 +57,27 @@ type (
 		Data map[string]*tiff.Tag
 	}
 )
+
+func (m *Meta) Scan(src interface{}) error {
+	switch t := src.(type) {
+	case []byte:
+		if t == nil {
+			return nil
+		}
+		return json.Unmarshal(t, &m)
+	case string:
+		if t == "" {
+			return nil
+		}
+		return json.Unmarshal([]byte(t), &m)
+	default:
+		return ErrInvalidType
+	}
+}
+
+func (m *Meta) Value() (driver.Value, error) {
+	return json.Marshal(m)
+}
 
 func (t DateTime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format(util.DateTimeFormat))
@@ -205,7 +218,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 	}
 	chk := fmt.Sprintf("%x", sha1.Sum(content))
 	res, err := db.Exec(`
-		insert into media(name, ctype, checksum, created, size, meta, modified) 
+		insert into media(name, ctype, checksum, created, size, meta, modified)
 		values(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		name, cType, chk, created, len(content), exd)
 	if err != nil {
@@ -240,7 +253,7 @@ func (u *User) AddMedia(name string, cType string, content []byte, fallbackDT st
 	return id, nil
 }
 
-func (u *User) GetAllMedia(deleted bool, page int, limit int) ([]*Media, int, error) {
+func (u *User) GetAllMedia(deleted bool, page int, limit int) ([]Media, int, error) {
 	db, err := getDB(u.ID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("GetAllMedia getDB error: %v", err)
@@ -254,32 +267,23 @@ func (u *User) GetAllMedia(deleted bool, page int, limit int) ([]*Media, int, er
 	} else {
 		where = "WHERE deleted IS NULL"
 	}
-	row, err := db.Query(fmt.Sprintf(`
-		SELECT %s
+	allMedia := []Media{}
+	err = db.Select(&allMedia, fmt.Sprintf(`
+		SELECT *
 		FROM media
 		%s
 		ORDER BY created DESC
 		LIMIT %d
 		OFFSET %d
-	`, mediaFields, where, limit, (limit*page)-limit), args...)
+	`, where, limit, (limit*page)-limit), args...)
 	if err != nil {
-		return nil, 0, fmt.Errorf("GetAllMedia db.Query error: %v", err)
+		return nil, 0, fmt.Errorf("GetAllMedia db select error: %v", err)
 	}
-	defer row.Close()
-	var result []*Media
-	for row.Next() {
-		m, err := getRowMedia(row)
-		if err != nil {
-			return nil, 0, fmt.Errorf("GetAllMedia getRowMedia error: %v", err)
-		}
-		result = append(result, m)
-	}
-	r := db.QueryRow(`SELECT COUNT(1) FROM media`)
 	var total int
-	if err := r.Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("GetAllMedia db.QueryRow error: %v", err)
+	if err := db.Get(&total, `SELECT COUNT(1) FROM media`); err != nil {
+		return nil, 0, fmt.Errorf("GetAllMedia select count error %v", err)
 	}
-	return result, total, nil
+	return allMedia, total, nil
 }
 
 func (u *User) GetMediaByID(id int64) (*Media, error) {
@@ -287,24 +291,20 @@ func (u *User) GetMediaByID(id int64) (*Media, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GetMediaByID getDB error: %v", err)
 	}
-	row, err := db.Query(fmt.Sprintf(`
-		SELECT %s
-		FROM media 
+	media := &Media{}
+	err = db.Get(media, `
+		SELECT *
+		FROM media
 		WHERE id = ?
 		LIMIT 1
-	`, mediaFields), id)
+	`, id)
 	if err != nil {
-		return nil, fmt.Errorf("GetMediaByID db.Query error: %v", err)
-	}
-	defer row.Close()
-	for row.Next() {
-		m, err := getRowMedia(row)
-		if err != nil {
-			return nil, fmt.Errorf("GetMediaByID getRowMedia error: %v", err)
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
 		}
-		return m, nil
+		return nil, fmt.Errorf("GetMediaByID db get error: %v", err)
 	}
-	return nil, ErrNotFound
+	return media, nil
 }
 
 func (u *User) RestoreMediaById(ids []int64) error {
@@ -315,7 +315,7 @@ func (u *User) RestoreMediaById(ids []int64) error {
 	cleanIDs := strings.Join(util.Int64ToStrings(ids), ",")
 	_, err = db.Exec(fmt.Sprintf(`
 		UPDATE media
-		SET 
+		SET
 			modified=CURRENT_TIMESTAMP,
 			deleted=NULL
 		WHERE id IN (%s);
@@ -336,21 +336,17 @@ func (u *User) DeleteMediaById(ids []int64) error {
 		delIDs        []int64
 		pathsToDelete []string
 	)
-	row, err := db.Query(fmt.Sprintf(`
-		SELECT %s
+	medias := []Media{}
+	err = db.Select(&medias, fmt.Sprintf(`
+		SELECT *
 		FROM media
 		WHERE id IN (%s)
-	`, mediaFields, cleanIDs))
+	`, cleanIDs))
 	if err != nil {
 		return fmt.Errorf("DeleteMediaById db.Query error: %v", err)
 	}
-	defer row.Close()
 	rowCtr := 0
-	for row.Next() {
-		m, err := getRowMedia(row)
-		if err != nil {
-			return fmt.Errorf("DeleteMediaById getRowMedia error: %v", err)
-		}
+	for _, m := range medias {
 		if m.Deleted != nil {
 			// permanent
 			delIDs = append(delIDs, m.ID)
@@ -392,7 +388,7 @@ func (u *User) DeleteMediaById(ids []int64) error {
 
 	_, err = db.Exec(fmt.Sprintf(`
 		UPDATE media
-		SET 
+		SET
 			modified=CURRENT_TIMESTAMP,
 			deleted=CURRENT_TIMESTAMP
 		WHERE id IN (%s);
@@ -403,76 +399,16 @@ func (u *User) DeleteMediaById(ids []int64) error {
 	return nil
 }
 
-func getRowMedia(row *sql.Rows) (*Media, error) {
-	m := &Media{Meta: &Meta{}}
-	var (
-		created  string
-		modified string
-		deleted  sql.NullString
-		meta     sql.NullString
-		public   int
-	)
-	if err := row.Scan(&m.ID, &m.Name, &public, &m.Checksum, &m.ContentType, &created, &modified, &m.Size, &meta, &deleted); err != nil {
-		return nil, fmt.Errorf("getRowMedia row.Scan error: %v", err)
-	}
-	dt, err := time.Parse(util.DateTimeFormat, created)
-	if err != nil {
-		return nil, fmt.Errorf("getRowMedia time.Parse error: %v", err)
-	}
-	m.Created = DateTime(dt)
-	dt, err = time.Parse(util.DateTimeFormat, modified)
-	if err != nil {
-		return nil, fmt.Errorf("getRowMedia time.Parse 2 error: %v", err)
-	}
-	m.Modified = DateTime(dt)
-	m.Public = public == 1
-	if deleted.Valid && len(deleted.String) > 0 {
-		dt, err = time.Parse(util.DateTimeFormat, deleted.String)
-		if err != nil {
-			return nil, fmt.Errorf("getRowMedia time.Parse 3 error: %v", err)
-		}
-		dd := DateTime(dt)
-		m.Deleted = &dd
-	}
-	if meta.Valid && len(meta.String) > 0 {
-		if err := json.Unmarshal([]byte(meta.String), m.Meta); err != nil {
-			return nil, fmt.Errorf("getRowMedia json.Unmarshal error: %v", err)
-		}
-	}
-	return m, nil
-}
-
-func getRowUser(row *sql.Rows) (*User, error) {
-	u := &User{}
-	var (
-		admin  int
-		active int
-	)
-	if err := row.Scan(&u.ID, &u.Name, &u.Password, &admin, &active); err != nil {
-		return nil, err
-	}
-	u.IsAdmin = admin == 1
-	u.Active = active == 1
-	return u, nil
-}
-
-func GetUsers() ([]*User, error) {
+func GetUsers() ([]User, error) {
 	db, err := getDB(0)
 	if err != nil {
 		return nil, fmt.Errorf("GetUsers getDB error: %v", err)
 	}
-	row, err := db.Query(fmt.Sprintf(`SELECT %s
-	FROM user`, userFields))
-	defer row.Close()
-	var result []*User
-	for row.Next() {
-		u, err := getRowUser(row)
-		if err != nil {
-			return nil, fmt.Errorf("GetUsers getRowUser error: %v", err)
-		}
-		result = append(result, u)
+	users := []User{}
+	if err = db.Select(&users, `SELECT * FROM user`); err != nil {
+		return nil, fmt.Errorf("GetUsers select error")
 	}
-	return result, nil
+	return users, nil
 }
 
 func GetUser(userID int64, name string) (*User, error) {
@@ -488,22 +424,17 @@ func GetUser(userID int64, name string) (*User, error) {
 	} else {
 		val = userID
 	}
-	row, err := db.Query(fmt.Sprintf(`SELECT %s
+	user := &User{}
+	err = db.Get(user, fmt.Sprintf(`SELECT *
 	FROM user
-	WHERE %s = ?
-	LIMIT 1`, userFields, field), val)
-	defer row.Close()
+	WHERE %s = ?`, field), val)
 	if err != nil {
-		return nil, fmt.Errorf("GetUser db.Query error: %v", err)
-	}
-	for row.Next() {
-		u, err := getRowUser(row)
-		if err != nil {
-			return nil, fmt.Errorf("GetUser getRowUser error: %v", err)
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
 		}
-		return u, nil
+		return nil, fmt.Errorf("GetUser db get error: %v", err)
 	}
-	return nil, ErrNotFound
+	return user, nil
 }
 
 func saveUser(user *User) error {
@@ -514,7 +445,7 @@ func saveUser(user *User) error {
 	args := []interface{}{user.Name, user.Password, sBool[user.IsAdmin], sBool[user.Active]}
 	if user.ID == 0 {
 		res, err := db.Exec(`
-		insert into user(name, password, admin, active) 
+		insert into user(name, password, admin, active)
 		values(?, ?, ?, ?)`, args...)
 		if err != nil {
 			return fmt.Errorf("saveUser db.Exec error: %v", err)
@@ -526,7 +457,7 @@ func saveUser(user *User) error {
 	} else {
 		args = append(args, user.ID)
 		_, err = db.Exec(`
-		UPDATE user SET 
+		UPDATE user SET
 		name = ?,
 		password = ?,
 		admin = ?,

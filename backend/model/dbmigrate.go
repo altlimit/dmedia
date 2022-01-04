@@ -4,7 +4,7 @@ var (
 	mediaMigrations = []string{
 		`
 		CREATE TABLE media (
-			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, 
+			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
 			public INTEGER NOT NULL DEFAULT 0,
 			checksum TEXT NOT NULL,
@@ -17,6 +17,22 @@ var (
 		);
 		CREATE INDEX idx_modified on media(modified);
 		CREATE UNIQUE INDEX idx_checksum on media(checksum);
+	`,
+		`
+		CREATE TABLE sync_location (
+			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			stype TEXT NOT NULL,
+			deleted DATETIME,
+			config JSON
+		);
+		CREATE TABLE sync_media (
+			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			location_id INTEGER NOT NULL,
+			media_id INTEGER NOT NULL,
+			meta TEXT NOT NULL
+		);
+		CREATE UNIQUE INDEX idx_loc_media on sync_media(location_id,media_id);
 	`,
 	}
 	dbMigrations = []string{

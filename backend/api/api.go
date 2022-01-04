@@ -115,6 +115,9 @@ func NewServer() *Server {
 	sr.HandleFunc("/users/{id}", srv.handleSaveUser()).Methods(http.MethodPut)
 	sr.HandleFunc("/users", srv.handleGetUser()).Methods(http.MethodGet)
 
+	sr.HandleFunc("/syncs", srv.handleCreateSyncLocation()).Methods(http.MethodPost)
+	sr.HandleFunc("/syncs/{id}", srv.handleSaveSyncLocation()).Methods(http.MethodPut)
+
 	sr.HandleFunc("/media", srv.handleGetAllMedia()).Methods(http.MethodGet)
 	sr.HandleFunc("/media/{id}", srv.handleGetMedia()).Methods(http.MethodGet)
 	sr.HandleFunc("/media/{id}", srv.handleDeleteMedia()).Methods(http.MethodDelete)

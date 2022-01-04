@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/altlimit/dmedia/util"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,7 +23,7 @@ var (
 
 type (
 	DB struct {
-		db         *sql.DB
+		db         *sqlx.DB
 		lastAccess time.Time
 	}
 )
@@ -36,7 +36,7 @@ func dataPath(userID int64) string {
 	return dp
 }
 
-func getDB(userID int64) (*sql.DB, error) {
+func getDB(userID int64) (*sqlx.DB, error) {
 	dbLock.Lock()
 	defer dbLock.Unlock()
 	odb, ok := openedDBs[userID]
@@ -52,7 +52,7 @@ func getDB(userID int64) (*sql.DB, error) {
 		log.Printf("Opening main.db")
 		p = filepath.Join(util.DataPath, "main.db")
 	}
-	db, err := sql.Open("sqlite3", p)
+	db, err := sqlx.Open("sqlite3", p)
 	db.SetMaxOpenConns(1)
 	if err != nil {
 		return nil, fmt.Errorf("getDB sql.Open error: %v", err)
