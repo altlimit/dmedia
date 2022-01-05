@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -21,7 +22,21 @@ type Telegram struct {
 }
 
 func (t *Telegram) Valid() bool {
-	return t.Token != "" && t.Channel != ""
+	if t.Token != "" && t.Channel != "" {
+		resp, err := http.Get(t.getURL("getMe"))
+		if err != nil {
+			log.Println("valid error", err)
+			return false
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("valid read body error", err)
+		}
+		json := string(body)
+		ok := gjson.Get(json, "ok")
+		return ok.Bool()
+	}
+	return false
 }
 
 func (t *Telegram) getURL(method string) string {

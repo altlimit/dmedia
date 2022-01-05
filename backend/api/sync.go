@@ -15,6 +15,13 @@ func (s *Server) handleCreateSyncLocation() http.HandlerFunc {
 		if err := s.bind(r, req); err != nil {
 			return err
 		}
+		_, err := sync.SyncFromLocation(req)
+		if err != nil {
+			if err == sync.ErrType {
+				return newValidationErr("type", "invalid")
+			}
+			return newValidationErr("config", "invalid")
+		}
 		ctx := r.Context()
 		u := s.currentUser(ctx)
 		if u == nil {
@@ -48,6 +55,15 @@ func (s *Server) handleSaveSyncLocation() http.HandlerFunc {
 		loc.Type = req.Type
 		loc.Config = req.Config
 		loc.Deleted = req.Deleted
+
+		_, err = sync.SyncFromLocation(loc)
+		if err != nil {
+			if err == sync.ErrType {
+				return newValidationErr("type", "invalid")
+			}
+			return newValidationErr("config", "invalid")
+		}
+
 		if err := loc.Save(u); err != nil {
 			return err
 		}

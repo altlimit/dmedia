@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/altlimit/dmedia/model"
@@ -16,6 +17,8 @@ type (
 
 var (
 	SyncChannel = make(chan int64)
+	ErrType     = fmt.Errorf("invalid type")
+	ErrConfig   = fmt.Errorf("invlid config")
 )
 
 func syncListener() {
@@ -46,6 +49,22 @@ func ScheduleSync(userID int64) {
 	SyncChannel <- userID
 }
 
+func SyncFromLocation(loc *model.SyncLocation) (Sync, error) {
+	var syncer Sync
+	if loc.Type == "telegram" {
+		syncer = &Telegram{
+			Token:   loc.Config["token"].(string),
+			Channel: loc.Config["channel"].(string),
+		}
+	}
+	if syncer == nil {
+		return nil, ErrType
+	} else if !syncer.Valid() {
+		return nil, ErrConfig
+	}
+	return syncer, nil
+}
+
 func SyncUser(userID int64) {
 	locs, err := model.GetSyncs(userID, true)
 	if err != nil {
@@ -54,17 +73,11 @@ func SyncUser(userID int64) {
 	}
 
 	for _, loc := range locs {
-		var syncer Sync
-		if loc.Type == "telegram" {
-			syncer = &Telegram{
-				Token:   loc.Config["token"].(string),
-				Channel: loc.Config["channel"].(string),
-			}
-		}
-		if syncer == nil {
+		syncer, err := SyncFromLocation(&loc)
+		if err == ErrType {
 			log.Println("SyncUser", userID, "location type", loc.Type, "invalid")
 			continue
-		} else if !syncer.Valid() {
+		} else if err == ErrConfig {
 			log.Println("SyncUser", userID, "invalid config", loc.Name)
 			continue
 		}
