@@ -5,7 +5,7 @@ on:
       - "backend/**"
     tags:
       - 'v**-server'
-    
+
 jobs:
   build:
     name: Create Backend Release
@@ -46,14 +46,14 @@ jobs:
         with:
           node-version: 14
       - name: Install npm deps
-        run: npm install execa
+        run: npm install execa@5.1.1
       - name: Create Backend Release
         uses: actions/github-script@v4
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |                        
+          script: |
             const fs = require('fs').promises;
-            const execa = require('execa');            
+            const execa = require('execa');
             const { repo: { owner, repo }, sha } = context;
             const releaseName = process.env.GITHUB_REF.split('/').pop();
             const { stdout } = await execa('git', ['tag', '-l', "--format=%(contents:subject)", releaseName]);
@@ -72,5 +72,5 @@ jobs:
                     release_id: release.data.id,
                     name: file,
                     data: await fs.readFile(`./build/${file}`)
-                });            
+                });
             }
