@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/altlimit/dmedia/sync"
 	"github.com/altlimit/dmedia/util"
 	"github.com/gorilla/mux"
 )
@@ -72,6 +73,7 @@ func (s *Server) handleDeleteMedia() http.HandlerFunc {
 		if err := u.DeleteMediaById(intIds); err != nil {
 			return err
 		}
+		go sync.ScheduleSync(u.ID)
 		return nil
 	})
 }

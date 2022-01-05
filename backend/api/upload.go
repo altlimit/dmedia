@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/altlimit/dmedia/model"
+	"github.com/altlimit/dmedia/sync"
 	"github.com/altlimit/dmedia/util"
 )
 
@@ -79,6 +80,7 @@ func (s *Server) handleUpload() http.HandlerFunc {
 			}
 			return err
 		}
+		go sync.ScheduleSync(u.ID)
 		return id
 	})
 }
@@ -100,6 +102,7 @@ func (s *Server) handleUploadDir() http.HandlerFunc {
 					id, err := u.AddMediaFromPath(file)
 					log.Printf("AddMedia: %d -> Err: %v -> %s", id, err, file)
 				}
+				go sync.ScheduleSync(u.ID)
 			}()
 		}
 		return nil

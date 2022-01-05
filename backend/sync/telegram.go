@@ -20,17 +20,26 @@ type Telegram struct {
 	Channel string `json:"channel"`
 }
 
+func (t *Telegram) Valid() bool {
+	return t.Token != "" && t.Channel != ""
+}
+
 func (t *Telegram) getURL(method string) string {
 	return fmt.Sprintf("https://api.telegram.org/bot%s/%s", t.Token, method)
 }
 
 func (t *Telegram) Upload(cType string, path string) (string, error) {
 	form := map[string]string{"chat_id": t.Channel}
-	var field string
+	var (
+		field  string
+		method string
+	)
 	if strings.HasPrefix(cType, "video/") {
 		field = "video"
+		method = "sendVideo"
 	} else if strings.HasPrefix(cType, "image/") {
 		field = "photo"
+		method = "sendPhoto"
 	} else {
 		return "", fmt.Errorf("SendMedia not support")
 	}
@@ -39,7 +48,7 @@ func (t *Telegram) Upload(cType string, path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("SendMedia form error %v", err)
 	}
-	resp, err := http.Post(t.getURL("sendPhoto"), ct, data)
+	resp, err := http.Post(t.getURL(method), ct, data)
 	if err != nil {
 		return "", fmt.Errorf("SendMedia post error %v", err)
 	}
@@ -77,6 +86,9 @@ func (t *Telegram) Delete(meta string) error {
 	}
 	errCode := gjson.Get(json, "error_code")
 	errDesc := gjson.Get(json, "description")
+	if strings.Contains(errDesc.String(), "message to delete not found") {
+		return nil
+	}
 	return fmt.Errorf("DeleteMessage error %d %s", errCode.Int(), errDesc.String())
 }
 

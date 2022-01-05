@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/altlimit/dmedia/model"
+	"github.com/altlimit/dmedia/sync"
 	"github.com/altlimit/dmedia/util"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/handlers"
@@ -71,6 +72,7 @@ func (ae alertError) Error() string {
 
 // NewServer returns the instance of api server that implements the Handler interface
 func NewServer() *Server {
+	sync.Init()
 	r := mux.NewRouter()
 
 	srv := &Server{

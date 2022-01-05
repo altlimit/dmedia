@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/altlimit/dmedia/model"
+	"github.com/altlimit/dmedia/sync"
 	"github.com/altlimit/dmedia/util"
 	"github.com/gorilla/mux"
 )
@@ -22,6 +23,7 @@ func (s *Server) handleCreateSyncLocation() http.HandlerFunc {
 		if err := req.Save(u); err != nil {
 			return err
 		}
+		go sync.ScheduleSync(u.ID)
 		return req
 	})
 }
@@ -49,6 +51,7 @@ func (s *Server) handleSaveSyncLocation() http.HandlerFunc {
 		if err := loc.Save(u); err != nil {
 			return err
 		}
+		go sync.ScheduleSync(u.ID)
 		return loc
 	})
 }
@@ -60,7 +63,7 @@ func (s *Server) handleGetSync() http.HandlerFunc {
 		if u == nil {
 			return errAuth
 		}
-		syncs, err := model.GetSyncs(u.ID)
+		syncs, err := model.GetSyncs(u.ID, false)
 		if err != nil {
 			return err
 		}
