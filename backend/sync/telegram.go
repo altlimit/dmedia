@@ -39,6 +39,10 @@ func (t *Telegram) Valid() bool {
 	return false
 }
 
+func (t *Telegram) CanRetry(err error) bool {
+	return strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "500")
+}
+
 func (t *Telegram) getURL(method string) string {
 	return fmt.Sprintf("https://api.telegram.org/bot%s/%s", t.Token, method)
 }

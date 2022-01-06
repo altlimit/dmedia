@@ -3,6 +3,7 @@ package sync
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/altlimit/dmedia/model"
 )
@@ -10,6 +11,7 @@ import (
 type (
 	Sync interface {
 		Valid() bool
+		CanRetry(error) bool
 		Upload(cType string, path string) (string, error)
 		Delete(meta string) error
 	}
@@ -103,29 +105,66 @@ func SyncLocation(userID int64, loc *model.SyncLocation, syncer Sync) {
 		failedDelete int
 	)
 	for _, m := range medias {
-		meta, err := syncer.Upload(m.ContentType, m.Path(userID))
-		if err != nil {
-			log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] upload", m.ID, "error", err)
-			failedUpload++
-			continue
+		var (
+			meta string
+			err  error
+		)
+		for i := 0; i < 3; i++ {
+			meta, err = syncer.Upload(m.ContentType, m.Path(userID))
+			if err != nil {
+				if syncer.CanRetry(err) {
+					log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] upload", m.ID, "error", err, "retrying in 1 minute x", i)
+					time.Sleep(time.Second * 1)
+					continue
+				}
+			}
+			break
 		}
-		uploaded++
-		log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] uploaded", m.ID, "progress", uploaded, "/", toUpload, "failed", failedUpload)
-		addSync = append(addSync, model.SyncMedia{
+		as := model.SyncMedia{
 			LocationID: loc.ID,
 			MediaID:    m.ID,
-			Meta:       meta,
-		})
+			Meta:       meta, // this is empty for permanent failure
+		}
+		if err != nil {
+			if syncer.CanRetry(err) {
+				log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] upload", m.ID, "error", err, "retry later")
+				continue
+			}
+			log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] upload", m.ID, "error", err)
+			failedUpload++
+		} else {
+			uploaded++
+			log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] uploaded", m.ID, "progress", uploaded, "/", toUpload, "failed", failedUpload)
+		}
+		addSync = append(addSync, as)
 	}
 	for _, sm := range delMedias {
-		err = syncer.Delete(sm.Meta)
+		err = nil
+		// empty meta means never uploaded so we don't need to delete anything but the record
+		if sm.Meta != "" {
+			for i := 0; i < 3; i++ {
+				err = syncer.Delete(sm.Meta)
+				if err != nil {
+					if syncer.CanRetry(err) {
+						log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] delete", sm.MediaID, "error", err, "retrying in 1 minute x", i)
+						time.Sleep(time.Minute * 1)
+						continue
+					}
+				}
+				break
+			}
+		}
 		if err != nil {
+			if syncer.CanRetry(err) {
+				log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] delete", sm.MediaID, "error", err, "retry later")
+				continue
+			}
 			log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] delete", sm.MediaID, "error", err)
 			failedDelete++
-			continue
+		} else {
+			deleted++
+			log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] deleted", sm.MediaID, "progress", deleted, "/", toDelete, "failed", failedDelete)
 		}
-		deleted++
-		log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] deleted", sm.MediaID, "progress", deleted, "/", toDelete, "failed", failedDelete)
 		delSync = append(delSync, sm)
 	}
 

@@ -86,7 +86,7 @@ Content-Type: application/json
 
 ###
 
-DELETE {{baseUrl}}/api/syncs/3
+DELETE {{baseUrl}}/api/syncs/8
 Authorization: {{auth}}
 Content-Type: application/json
 
@@ -125,7 +125,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jj
 Content-Disposition: form-data; name="file"; filename="test.jpg"
 Content-Type: image/jpeg
 
-< ./test2.jpg
+< ../tmp/test2.jpg
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
 
 ###
@@ -139,7 +139,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryosFv4xxeUbP0jj
 Content-Disposition: form-data; name="file"; filename="test3.mp4"
 Content-Type: video/mp4
 
-< ./test3.mp4
+< ../tmp/test3.mp4
 ------WebKitFormBoundaryosFv4xxeUbP0jjyQ--
 
 ###
@@ -164,7 +164,7 @@ Authorization: {{auth}}
 
 ###
 
-DELETE {{baseUrl}}/api/media/1
+DELETE {{baseUrl}}/api/media/12
 Authorization: {{auth}}
 
 ###
