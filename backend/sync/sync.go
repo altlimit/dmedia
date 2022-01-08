@@ -90,7 +90,7 @@ func SyncUser(userID int64) {
 func SyncLocation(userID int64, loc *model.SyncLocation, syncer Sync) {
 	medias, delMedias, err := model.GetMediaToSync(userID, loc)
 	if err != nil {
-		log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] get sync error ", err)
+		log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] get sync error", err)
 		return
 	}
 	toUpload := len(medias)
