@@ -3,6 +3,7 @@ package sync
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/altlimit/dmedia/model"
@@ -21,6 +22,8 @@ var (
 	SyncChannel = make(chan int64)
 	ErrType     = fmt.Errorf("invalid type")
 	ErrConfig   = fmt.Errorf("invlid config")
+
+	locks sync.Map
 )
 
 func syncListener() {
@@ -88,6 +91,11 @@ func SyncUser(userID int64) {
 }
 
 func SyncLocation(userID int64, loc *model.SyncLocation, syncer Sync) {
+	key := fmt.Sprintf("%d/%d", userID, loc.ID)
+	lock, _ := locks.LoadOrStore(key, &sync.Mutex{})
+	mu := lock.(*sync.Mutex)
+	mu.Lock()
+	defer mu.Unlock()
 	medias, delMedias, err := model.GetMediaToSync(userID, loc)
 	if err != nil {
 		log.Println("SyncLocation[", userID, "][", loc.ID, loc.Name, "] get sync error", err)

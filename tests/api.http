@@ -86,7 +86,7 @@ Content-Type: application/json
 
 ###
 
-DELETE {{baseUrl}}/api/syncs/8
+DELETE {{baseUrl}}/api/syncs/1
 Authorization: {{auth}}
 Content-Type: application/json
 

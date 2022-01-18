@@ -22,9 +22,10 @@ Create a start_dmedia.sh file and add the contents below then run it. Mount a lo
 
 ```bash
 #!/bin/sh
+set -e
+docker pull altlimit/dmedia
 docker stop dmedia
 docker rm dmedia
-docker pull altlimit/dmedia
 docker create \
   --name=dmedia \
   -u 1000:1000 \
